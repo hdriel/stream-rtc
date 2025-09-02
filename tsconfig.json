@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "rootDir": ".",
+        "outDir": "dist",
+        "declaration": true,
+        "preserveSymlinks": true,
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+    },
+    "files": ["@types/express/index.d.ts", "src", "mongo-migrations/migrate-mongo-config.ts"],
+    "include": ["src/*"]
+}
