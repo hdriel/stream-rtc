@@ -1,0 +1,32 @@
+{
+  "name": "demo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "nodemon demo/src/server.ts",
+    "open-url": "open https://localhost:8081",
+    "ca": "mkcert create-ca",
+    "cert": "mkcert create-cert",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "attach": "yalc add simple-rtc-peer-connection",
+    "detach": "yalc remove simple-rtc-peer-connection"
+  },
+  "devDependencies": {
+    "vite": "^7.1.2",
+    "@types/express": "^5.0.3",
+    "express": "5.0.0",
+    "mkcert": "^1.5.1",
+    "nodemon": "^3.1.10",
+    "open": "^10.2.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "simple-rtc-peer-connection": "file:.yalc/simple-rtc-peer-connection"
+  }
+}

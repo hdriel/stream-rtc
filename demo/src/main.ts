@@ -1,8 +1,6 @@
 import * as io from 'socket.io-client';
-import { RTCPeerConnectionClient } from '../RTCPeerConnection.client.ts';
-import type { Offer } from '../decs.ts';
+import { RTCPeerConnectionClient, type Offer } from 'simple-rtc-peer-connection';
 
-debugger;
 const userName = 'Rob-' + Math.floor(Math.random() * 100000);
 const password = 'x';
 

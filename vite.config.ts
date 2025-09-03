@@ -1,25 +1,24 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path'; // install for this package: npm i -D @types/node
+import { resolve } from 'pathe'; // install for this package: npm i -D @types/node
+import dts from 'vite-plugin-dts'; // install for this package: npm i -D @types/node
 
 // https://vite.dev/config/
 export default defineConfig({
-    plugins: [],
+    plugins: [
+        dts({
+            insertTypesEntry: true,
+        }),
+    ],
     build: {
-        target: 'esnext', // for dynamic module imports, if not need to dynamic module import remove this
-        rollupOptions: {
-            // for multiple routes
-            input: {
+        lib: {
+            entry: {
                 index: resolve(__dirname, 'src/index.ts'),
                 client: resolve(__dirname, 'src/RTCPeerConnection.client.ts'),
                 server: resolve(__dirname, 'src/RTCPeerConnection.server.ts'),
             },
-            output: {
-                // manualChunks(id) {
-                //     if (id.includes('node_modules')) {
-                //         return id.split('node_modules/')[1].split('/')[0];
-                //     }
-                // },
-            },
+            name: 'RTCPeerConnectionAuto',
+            fileName: '[name]',
+            formats: ['es', 'cjs'],
         },
     },
 });

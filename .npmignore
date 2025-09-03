@@ -1,0 +1,7 @@
+demo
+nodemon.json
+.prettierrc
+tsconfig.json
+vite.config.ts
+src
+.gitignore

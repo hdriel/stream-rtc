@@ -3,12 +3,6 @@
     "private": true,
     "version": "1.0.0",
     "type": "module",
-    "scripts": {
-        "build": "tsc && vite build",
-        "preview": "vite preview",
-        "clean": "rimraf ./dist",
-        "yalc:publish": "pnpm run build && yalc publish --private --push"
-    },
     "files": [
         "dist"
     ],
@@ -32,15 +26,15 @@
             "types": "./dist/server.d.ts"
         }
     },
-    "devDependencies": {
-        "pathe": "^2.0.3",
-        "prettier": "^3.6.2",
-        "rimraf": "^6.0.1",
-        "socket.io": "^4.8.1",
-        "socket.io-client": "^4.8.1",
-        "ts-node": "^10.9.2",
-        "typescript": "^5.9.2",
-        "vite": "^7.1.2",
-        "vite-plugin-dts": "^4.5.4"
-    }
+    "scripts": {
+        "dev": "nodemon ../src/demo/server.ts",
+        "open-url": "open https://localhost:8081",
+        "ca": "mkcert create-ca",
+        "cert": "mkcert create-cert",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+        "clean": "rimraf ./dist",
+        "yalc:publish": "pnpm run build && yalc publish --private --push"
+    },
+    "yalcSig": "ca390a37bfd8164f81145535868b60c3"
 }

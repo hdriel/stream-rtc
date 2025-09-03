@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "packages": {
+    "simple-rtc-peer-connection": {
+      "signature": "ca390a37bfd8164f81145535868b60c3",
+      "file": true
+    }
+  }
+}

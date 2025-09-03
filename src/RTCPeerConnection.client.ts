@@ -1,6 +1,6 @@
 import type { Socket } from 'socket.io-client';
-import type { Offer, SocketEventType } from './decs';
-import { PEER_CONFIGURATION, SOCKET_EVENTS } from './consts';
+import type { Offer, SocketEventType } from './decs.ts';
+import { PEER_CONFIGURATION, SOCKET_EVENTS } from './consts.ts';
 
 export class RTCPeerConnectionClient {
     private readonly socket: Socket;

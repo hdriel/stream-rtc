@@ -5,12 +5,12 @@ import express from 'express';
 import { Server as SocketIO } from 'socket.io';
 import { RTCPeerConnectionServer } from 'simple-rtc-peer-connection';
 
-// const __dirname = import.meta.dirname;
+const __dirname = import.meta.dirname;
 console.log('__dirname', __dirname);
 const app = express();
 
 app.use(express.static(path.resolve(__dirname)));
-app.use(express.static(path.resolve(__dirname, '../index.html')));
+app.use(express.static(path.resolve(__dirname, '../../dist')));
 
 //we need a key and cert to run https
 //we generated them with mkcert
