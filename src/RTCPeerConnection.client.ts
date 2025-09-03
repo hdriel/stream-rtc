@@ -34,9 +34,9 @@ export class RTCPeerConnectionClient {
         this.init();
     }
 
-    async call() {
+    async call(constraints?: MediaStreamConstraints) {
         try {
-            await this.fetchUserMedia();
+            await this.fetchUserMedia(constraints);
 
             // peerConnection is all set with our STUN servers sent over
             await this.createPeerConnection();
@@ -55,8 +55,8 @@ export class RTCPeerConnectionClient {
         }
     }
 
-    async answerOffer(offerObj: Offer) {
-        await this.fetchUserMedia();
+    async answerOffer(offerObj: Offer, constraints?: MediaStreamConstraints) {
+        await this.fetchUserMedia(constraints);
         await this.createPeerConnection(offerObj);
         if (!this.peerConnection) throw new Error('Peer connection not found');
 
@@ -93,8 +93,7 @@ export class RTCPeerConnectionClient {
 
     private async fetchUserMedia(
         constraints: MediaStreamConstraints = {
-            video: true,
-            // audio: true,
+            video: true, // audio: true,
         }
     ) {
         return new Promise<void>(async (resolve, reject) => {
