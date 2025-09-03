@@ -1,17 +1,25 @@
 {
-    "compilerOptions": {
-        "target": "es6",
-        "module": "commonjs",
-        "rootDir": ".",
-        "outDir": "dist",
-        "declaration": true,
-        "preserveSymlinks": true,
-        "moduleResolution": "node",
-        "esModuleInterop": true,
-        "strict": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true
-    },
-    "files": ["@types/express/index.d.ts", "src", "mongo-migrations/migrate-mongo-config.ts"],
-    "include": ["src/*"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
 }
