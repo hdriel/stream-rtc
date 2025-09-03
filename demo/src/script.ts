@@ -7,10 +7,15 @@ const password = 'x';
 const userNameEl = document.querySelector('#user-name') as Element;
 userNameEl.innerHTML = userName;
 
-const socket = io.connect('https://localhost:8181/', { auth: { userName, password } });
+// @ts-ignore
+const host = import.meta.env.VITE_SERVER_HOST;
+const url = `https://${host}:8181/`;
+const socket = io.connect(url, { auth: { userName, password } });
+console.log('socket connecting on url:', url);
 
 const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
 console.log('localVideoEl', localVideoEl);
+
 const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
 console.log('remoteVideoEl', localVideoEl);
 
