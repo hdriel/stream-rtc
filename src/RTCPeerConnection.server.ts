@@ -1,4 +1,4 @@
-import { Socket as SocketIO } from 'socket.io';
+import type { Socket as SocketIO } from 'socket.io';
 import type { SocketEventType, Offer } from './decs';
 import { SOCKET_EVENTS } from './consts';
 

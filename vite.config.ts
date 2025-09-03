@@ -14,11 +14,11 @@ export default defineConfig({
                 server: resolve(__dirname, 'src/RTCPeerConnection.server.ts'),
             },
             output: {
-                manualChunks(id) {
-                    if (id.includes('node_modules')) {
-                        return id.split('node_modules/')[1].split('/')[0];
-                    }
-                },
+                // manualChunks(id) {
+                //     if (id.includes('node_modules')) {
+                //         return id.split('node_modules/')[1].split('/')[0];
+                //     }
+                // },
             },
         },
     },
