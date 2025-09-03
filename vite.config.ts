@@ -11,14 +11,15 @@ export default defineConfig({
     ],
     build: {
         lib: {
-            entry: {
-                index: resolve(__dirname, 'src/index.ts'),
-                client: resolve(__dirname, 'src/RTCPeerConnection.client.ts'),
-                server: resolve(__dirname, 'src/RTCPeerConnection.server.ts'),
-            },
+            // entry: {
+            //     index: resolve(__dirname, 'src/index.ts'),
+            //     client: resolve(__dirname, 'src/RTCPeerConnection.client.ts'),
+            //     server: resolve(__dirname, 'src/RTCPeerConnection.server.ts'),
+            // },
+            entry: resolve(__dirname, 'src/index.ts'),
             name: 'RTCPeerConnectionAuto',
             fileName: '[name]',
-            formats: ['es', 'cjs'],
+            formats: ['es', 'cjs', 'umd'],
         },
     },
 });

@@ -11,6 +11,7 @@ export class RTCPeerConnectionClient {
     private readonly peerConfiguration: RTCConfiguration;
     private readonly localVideoEl: HTMLVideoElement;
     private readonly remoteVideoEl: HTMLVideoElement;
+    private readonly offerCallBacks: Set<(offers: Offer[]) => void>;
     public didIOffer: boolean = false;
     public userId: string = '';
 
@@ -18,7 +19,6 @@ export class RTCPeerConnectionClient {
         socket: Socket,
         elements: { userId: string; localVideoEl: HTMLVideoElement; remoteVideoEl: HTMLVideoElement },
         options: {
-            createOfferCB?: (offers: Offer[]) => void;
             socketEventsMapper?: SocketEventType;
             peerConfiguration?: RTCConfiguration;
         } = { socketEventsMapper: SOCKET_EVENTS, peerConfiguration: PEER_CONFIGURATION }
@@ -29,8 +29,9 @@ export class RTCPeerConnectionClient {
         this.remoteVideoEl = elements.remoteVideoEl;
         this.socketEventsMapper = options.socketEventsMapper || SOCKET_EVENTS;
         this.peerConfiguration = options.peerConfiguration || PEER_CONFIGURATION;
+        this.offerCallBacks = new Set();
 
-        this.init(options.createOfferCB);
+        this.init();
     }
 
     async call() {
@@ -82,7 +83,7 @@ export class RTCPeerConnectionClient {
         console.log(offerIceCandidates);
     }
 
-    async addAnswer(offerObj: Offer) {
+    private async addAnswer(offerObj: Offer) {
         //addAnswer is called in socketListeners when an answerResponse is emitted.
         //at this point, the offer and answer have been exchanged!
         //now CLIENT1 needs to set the remote
@@ -90,7 +91,7 @@ export class RTCPeerConnectionClient {
         // console.log(peerConnection.signalingState)
     }
 
-    async fetchUserMedia(
+    private async fetchUserMedia(
         constraints: MediaStreamConstraints = {
             video: true,
             // audio: true,
@@ -110,7 +111,7 @@ export class RTCPeerConnectionClient {
         });
     }
 
-    async createPeerConnection(offerObj?: Offer) {
+    private async createPeerConnection(offerObj?: Offer) {
         return new Promise<void>(async (resolve) => {
             //RTCPeerConnection is the thing that creates the connection
             //we can pass a config object, and that config object can contain stun servers
@@ -164,12 +165,20 @@ export class RTCPeerConnectionClient {
         });
     }
 
-    async addNewIceCandidate(iceCandidate: RTCIceCandidate) {
+    private async addNewIceCandidate(iceCandidate: RTCIceCandidate) {
         await this.peerConnection?.addIceCandidate(iceCandidate);
         console.log('======Added Ice Candidate======');
     }
 
-    init(createOfferCB?: (offers: Offer[]) => void) {
+    onOffersReceivedCB(cb: (offers: Offer[]) => void) {
+        this.offerCallBacks.add(cb);
+    }
+
+    offOffersReceivedCB(cb: (offers: Offer[]) => void) {
+        this.offerCallBacks.delete(cb);
+    }
+
+    private init() {
         this.socket.on(this.socketEventsMapper.answerResponse, async (offerObj: Offer) => {
             console.log(offerObj);
             await this.addAnswer(offerObj);
@@ -186,12 +195,16 @@ export class RTCPeerConnectionClient {
         //on connection get all available offers and call createOfferEls
         this.socket.on(this.socketEventsMapper.availableOffers, (offers: Offer[]) => {
             console.log(offers);
-            createOfferCB?.(offers);
+            for (const cb of [...this.offerCallBacks]) {
+                cb?.(offers);
+            }
         });
 
         //someone just made a new offer and we're already here - call createOfferEls
         this.socket.on(this.socketEventsMapper.newOfferAwaiting, (offers: Offer[]) => {
-            createOfferCB?.(offers);
+            for (const cb of [...this.offerCallBacks]) {
+                cb?.(offers);
+            }
         });
     }
 }

@@ -9,8 +9,7 @@ const __dirname = import.meta.dirname;
 console.log('__dirname', __dirname);
 const app = express();
 
-app.use(express.static(path.resolve(__dirname)));
-app.use(express.static(path.resolve(__dirname, '../../dist')));
+app.use(express.static(path.resolve(__dirname, '../dist')));
 
 //we need a key and cert to run https
 //we generated them with mkcert

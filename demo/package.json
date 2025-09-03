@@ -4,18 +4,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "nodemon demo/src/server.ts",
+    "start": "npm run build && tsx src/server.ts",
     "open-url": "open https://localhost:8081",
     "ca": "mkcert create-ca",
     "cert": "mkcert create-cert",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "attach": "yalc add simple-rtc-peer-connection",
-    "detach": "yalc remove simple-rtc-peer-connection"
+    "yalc:publish": "cd .. && npm run yalc:publish",
+    "yalc:attach": "yalc add simple-rtc-peer-connection",
+    "yalc:detach": "yalc remove simple-rtc-peer-connection"
   },
   "devDependencies": {
-    "vite": "^7.1.2",
     "@types/express": "^5.0.3",
     "express": "5.0.0",
     "mkcert": "^1.5.1",
@@ -24,7 +24,10 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "tslib": "^2.8.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.2"
   },
   "dependencies": {
     "simple-rtc-peer-connection": "file:.yalc/simple-rtc-peer-connection"

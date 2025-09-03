@@ -3,38 +3,25 @@
     "private": true,
     "version": "1.0.0",
     "type": "module",
-    "files": [
-        "dist"
-    ],
-    "main": "./dist/index.cjs",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-        "*": {
-            "import": "./dist/index.js",
-            "require": "./dist/index.cjs",
-            "types": "./dist/index.d.ts"
-        },
-        "client": {
-            "import": "./dist/client.js",
-            "require": "./dist/client.cjs",
-            "types": "./dist/client.d.ts"
-        },
-        "server": {
-            "import": "./dist/server.js",
-            "require": "./dist/server.cjs",
-            "types": "./dist/server.d.ts"
-        }
-    },
     "scripts": {
-        "dev": "nodemon ../src/demo/server.ts",
-        "open-url": "open https://localhost:8081",
-        "ca": "mkcert create-ca",
-        "cert": "mkcert create-cert",
         "build": "tsc && vite build",
         "preview": "vite preview",
         "clean": "rimraf ./dist",
         "yalc:publish": "pnpm run build && yalc publish --private --push"
     },
-    "yalcSig": "ca390a37bfd8164f81145535868b60c3"
+    "files": [
+        "dist"
+    ],
+    "main": "./dist/index.umd.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "default": "./dist/index.js",
+            "import": "./dist/index.js",
+            "require": "./dist/index.cjs",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "yalcSig": "ed2bf399ceab05371ded777a78d3a8e4"
 }

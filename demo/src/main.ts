@@ -1,29 +1,19 @@
-import * as io from 'socket.io-client';
-import { RTCPeerConnectionClient, type Offer } from 'simple-rtc-peer-connection';
+import('./script.ts');
 
-const userName = 'Rob-' + Math.floor(Math.random() * 100000);
-const password = 'x';
-
-const userNameEl = document.querySelector('#user-name') as Element;
-userNameEl.innerHTML = userName;
-
-const socket = io.connect('https://localhost:8181/', { auth: { userName, password } });
-
-const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
-const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
-
-const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName }, { createOfferCB });
-
-document.querySelector('#call')?.addEventListener('click', async () => pc.call());
-
-function createOfferCB(offers: Offer[]) {
-    //make green answer button for this new offer
-    const answerEl = document.querySelector('#answer');
-    offers.forEach((o) => {
-        console.log(o);
-        const newOfferEl = document.createElement('div');
-        newOfferEl.innerHTML = `<button class="btn btn-success col-1">Answer ${o.offererUserName}</button>`;
-        newOfferEl.addEventListener('click', () => pc.answerOffer(o));
-        answerEl?.appendChild(newOfferEl);
-    });
-}
+document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
+    <div class="container">
+      <div class="row mb-3 mt-3 justify-content-md-center">
+        <div id="user-name"></div>
+        <button id="call" class="btn btn-primary col-1">Call!</button>
+        <button id="hangup" class="col-1" class="btn btn-primary">Hangup</button>
+        <div id="answer" class="col"></div>
+      </div>
+      <div id="videos">
+        <div id="video-wrapper">
+          <div id="waiting" class="btn btn-warning">Waiting for answer...</div>
+          <video class="video-player" id="local-video" autoplay playsinline controls></video>
+        </div>
+        <video class="video-player" id="remote-video" autoplay playsinline controls></video>
+      </div>
+    </div>
+`;

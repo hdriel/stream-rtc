@@ -10,13 +10,16 @@ userNameEl.innerHTML = userName;
 const socket = io.connect('https://localhost:8181/', { auth: { userName, password } });
 
 const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
+console.log('localVideoEl', localVideoEl);
 const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
+console.log('remoteVideoEl', localVideoEl);
 
-const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName }, { createOfferCB });
+const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName });
+pc.onOffersReceivedCB(createOffersCB);
 
 document.querySelector('#call')?.addEventListener('click', async () => pc.call());
 
-function createOfferCB(offers: Offer[]) {
+function createOffersCB(offers: Offer[]) {
     //make green answer button for this new offer
     const answerEl = document.querySelector('#answer');
     offers.forEach((o) => {

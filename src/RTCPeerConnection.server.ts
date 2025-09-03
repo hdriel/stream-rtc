@@ -3,7 +3,6 @@ import type { SocketEventType, Offer } from './decs.ts';
 import { SOCKET_EVENTS } from './consts.ts';
 
 export class RTCPeerConnectionServer {
-    //offers will contain {}
     private socket: SocketIO;
     private static readonly offers: Offer[] = [];
     private static connectedSockets: Array<{ userName: string; socketId: string }> = [];
@@ -12,11 +11,11 @@ export class RTCPeerConnectionServer {
 
     constructor(
         socket: SocketIO,
-        userName: string,
+        userId: string,
         options: { socketEventsMapper?: SocketEventType } = { socketEventsMapper: SOCKET_EVENTS }
     ) {
         this.socket = socket;
-        this.userName = userName; // socket.handshake.auth.userName;
+        this.userName = userId; // socket.handshake.auth.userName;
         this.socketEventsMapper = options.socketEventsMapper || SOCKET_EVENTS;
         RTCPeerConnectionServer.connectedSockets.push({
             socketId: socket.id,
@@ -26,9 +25,11 @@ export class RTCPeerConnectionServer {
         if (RTCPeerConnectionServer.offers.length) {
             socket.emit(this.socketEventsMapper.availableOffers, RTCPeerConnectionServer.offers);
         }
+
+        this.init();
     }
 
-    init() {
+    private init() {
         this.socket.on(this.socketEventsMapper.newOffer, (newOffer) => {
             RTCPeerConnectionServer.offers.push({
                 offererUserName: this.userName,
