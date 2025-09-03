@@ -9,7 +9,9 @@ userNameEl.innerHTML = userName;
 
 // @ts-ignore
 const host = import.meta.env.VITE_SERVER_HOST;
-const url = `https://${host}:8181/`;
+// @ts-ignore
+const port = import.meta.env.VITE_SERVER_PORT;
+const url = `https://${host}:${port}/`;
 const socket = io.connect(url, { auth: { userName, password } });
 console.log('socket connecting on url:', url);
 
