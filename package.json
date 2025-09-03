@@ -21,7 +21,7 @@
         }
     },
     "scripts": {
-        "dev": "tsc src/demo/main.ts && node --loader ts-node/esm src/demo/server.ts",
+        "dev": "nodemon src/demo/server.ts",
         "open-url": "open https://localhost:8081",
         "ca": "mkcert create-ca",
         "cert": "mkcert create-cert",

@@ -3,13 +3,14 @@ import path from 'node:path';
 import https from 'https';
 import express from 'express';
 import { Server as SocketIO } from 'socket.io';
-import { RTCPeerConnectionServer } from '../RTCPeerConnection.server.ts';
+import { RTCPeerConnectionServer } from '..';
 
 const __dirname = import.meta.dirname;
 console.log('__dirname', __dirname);
 const app = express();
 
 app.use(express.static(path.resolve(__dirname)));
+app.use(express.static(path.resolve(__dirname, '../../dist')));
 
 //we need a key and cert to run https
 //we generated them with mkcert
