@@ -1,24 +1,31 @@
-import './style.css';
-import typescriptLogo from './typescript.svg';
-import viteLogo from '/vite.svg';
-import { setupCounter } from './counter.ts';
+import * as io from 'socket.io-client';
+import { RTCPeerConnectionClient } from '../RTCPeerConnection.client';
+import type { Offer } from '../decs';
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
-    <h1>Vite + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite and TypeScript logos to learn more
-    </p>
-  </div>
-`;
+debugger;
+const userName = 'Rob-' + Math.floor(Math.random() * 100000);
+const password = 'x';
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!);
+const userNameEl = document.querySelector('#user-name') as Element;
+userNameEl.innerHTML = userName;
+
+const socket = io.connect('https://localhost:8181/', { auth: { userName, password } });
+
+const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
+const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
+
+const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName }, { createOfferCB });
+
+document.querySelector('#call')?.addEventListener('click', async () => pc.call());
+
+function createOfferCB(offers: Offer[]) {
+    //make green answer button for this new offer
+    const answerEl = document.querySelector('#answer');
+    offers.forEach((o) => {
+        console.log(o);
+        const newOfferEl = document.createElement('div');
+        newOfferEl.innerHTML = `<button class="btn btn-success col-1">Answer ${o.offererUserName}</button>`;
+        newOfferEl.addEventListener('click', () => pc.answerOffer(o));
+        answerEl?.appendChild(newOfferEl);
+    });
+}

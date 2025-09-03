@@ -1,25 +1,46 @@
 {
-  "name": "rtc-vite",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "ca": "mkcert create-ca",
-    "cert": "mkcert create-cert",
-    "server": "nodemon src/demo/server.ts",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.3",
-    "express": "5.0.0",
-    "mkcert": "^1.5.1",
-    "nodemon": "^3.1.10",
-    "prettier": "^3.6.2",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1",
-    "typescript": "^5.9.2",
-    "vite": "^7.1.2"
-  }
+    "name": "rtc-vite",
+    "private": true,
+    "version": "1.0.0",
+    "type": "module",
+    "files": [
+        "./dist"
+    ],
+    "exports": {
+        "*": {
+            "default": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "client": {
+            "default": "./dist/RTCPeerConnection.client.js",
+            "types": "./dist/RTCPeerConnection.client.d.ts"
+        },
+        "server": {
+            "default": "./dist/RTCPeerConnection.server.js",
+            "types": "./dist/RTCPeerConnection.server.d.ts"
+        }
+    },
+    "scripts": {
+        "dev": "tsc src/demo/main.ts && node --loader ts-node/esm src/demo/server.ts",
+        "open-url": "open https://localhost:8081",
+        "ca": "mkcert create-ca",
+        "cert": "mkcert create-cert",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+        "clean": "rimraf ./dist"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.3",
+        "express": "5.0.0",
+        "mkcert": "^1.5.1",
+        "nodemon": "^3.1.10",
+        "open": "^10.2.0",
+        "prettier": "^3.6.2",
+        "rimraf": "^6.0.1",
+        "socket.io": "^4.8.1",
+        "socket.io-client": "^4.8.1",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.2"
+    }
 }

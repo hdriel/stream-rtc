@@ -1,4 +1,4 @@
-import type { SocketEventType } from './decs.ts';
+import type { SocketEventType } from './decs';
 
 export const SOCKET_EVENTS: SocketEventType = {
     newOffer: 'newOffer',

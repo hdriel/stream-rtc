@@ -1,7 +1,6 @@
 import { Socket as SocketIO } from 'socket.io';
-import type { Offer } from '../RTCPeerConnection.class.ts';
-import type { SocketEventType } from './decs.ts';
-import { SOCKET_EVENTS } from './consts.ts';
+import type { SocketEventType, Offer } from './decs';
+import { SOCKET_EVENTS } from './consts';
 
 export class RTCPeerConnectionServer {
     //offers will contain {}
