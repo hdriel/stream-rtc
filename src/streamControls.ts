@@ -28,7 +28,29 @@ export class StreamControls extends MediaStream {
         return this.localStream;
     }
 
-    async getDevices(kind?: MediaDeviceKind | MediaDeviceKind[]) {
+    async getDevices(): Promise<Record<MediaDeviceKind, MediaDeviceInfo[]>> {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            this.debug('getDevices', devices);
+
+            return devices.reduce(
+                (obj, deviceInfo) => {
+                    obj[deviceInfo.kind].push(deviceInfo);
+                    return obj;
+                },
+                {
+                    audioinput: [],
+                    audiooutput: [],
+                    videoinput: [],
+                } as Record<MediaDeviceKind, MediaDeviceInfo[]>
+            );
+        } catch (err) {
+            this.debug('ERROR: getDevices failed with error', err);
+            throw err;
+        }
+    }
+
+    async getDevicesListByKind(kind?: MediaDeviceKind | MediaDeviceKind[]) {
         try {
             const kinds = ([] as MediaDeviceKind[]).concat(kind as MediaDeviceKind).filter((v) => v);
 

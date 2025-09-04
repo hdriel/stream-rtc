@@ -1,182 +1,170 @@
+# WebRTC PeerConnection Signaling Suite
 
-# RTC Peer Connection implementation
+A robust TypeScript signaling solution for WebRTC applications using Socket.io as the signaling mechanism. The package provides an extensible and simple API for both server-side (signaling server) and client-side (browser/app) logic, enabling fast development of peer-to-peer video, audio, or data channels.
 
-Implement simple RTC peer connection to handle only what we need without to enter the details like STUN SDP ICE and so on...
-Enjoy 
+***
 
-# CODE USAGE
+## Features
 
-## client side script: 
-```typescript
+- **Written in TypeScript** for type safety and clarity.
+- **Signaling server** fully decoupled from client logic.
+- **Client helper class** for easy WebRTC peer connections and ICE negotiation.
+- **Customizable event mapping**, STUN server configuration, and media constraints.
+- **Extensible** for custom events or authentication flows.
 
-import * as io from 'socket.io-client';
-import { RTCPeerConnectionClient, type Offer } from 'simple-rtc-peer-connection';
+***
 
-const userName = 'Rob-' + Math.floor(Math.random() * 100000);
-const password = 'x';
+## Project Structure
 
-const userNameEl = document.querySelector('#user-name') as Element;
-userNameEl.innerHTML = userName;
-
-// @ts-ignore
-const host = import.meta.env.VITE_SERVER_HOST;
-// @ts-ignore
-const port = import.meta.env.VITE_SERVER_PORT;
-const url = `https://${host}:${port}/`;
-const socket = io.connect(url, { auth: { userName, password } });
-console.log('socket connecting on url:', url);
-
-const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
-console.log('localVideoEl', localVideoEl);
-
-const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
-console.log('remoteVideoEl', remoteVideoEl);
-
-const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName });
-pc.onOffersReceivedCB(createOffersCB);
-
-document.querySelector('#call')?.addEventListener('click', async () => pc.call());
-
-function createOffersCB(offers: Offer[]) {
-    //make green answer button for this new offer
-    const answerEl = document.querySelector('#answer');
-    offers.forEach((o) => {
-        console.log(o);
-        const newOfferEl = document.createElement('div');
-        newOfferEl.innerHTML = `<button class="btn btn-success col-1">Answer ${o.offererUserName}</button>`;
-        newOfferEl.addEventListener('click', () => pc.answerOffer(o));
-        answerEl?.appendChild(newOfferEl);
-    });
-}
 ```
-in client side import the RTC peer connection client class
-```typescript
-import * as io from 'socket.io-client';
-import { RTCPeerConnectionClient, type Offer } from 'simple-rtc-peer-connection';
-```
-
-creating new instance of RTC peer connection with the socket and 2 video elements and unique userId 
-```typescript
-const socket = io.connect(url, { auth: { userName, password } });
-const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName });
-```
-
-now can make a call first (the caller/CLIENT 1)
-```typescript
-document.querySelector('#call')?.addEventListener('click', async () => pc.call());
-```
-
-the client 2 will waiting for the offers 
-```typescript
-pc.onOffersReceivedCB(createOffersCB);
-```
-
-on offer received will load them as button to UI for click on get answer on offer
-```typescript
-newOfferEl.addEventListener('click', () => pc.answerOffer(o));
+src/
+├── RTCPeerConnection.server.ts    # Signaling server logic (Socket.io)
+├── RTCPeerConnection.client.ts    # WebRTC client logic (browser/app)
+├── decs.ts                        # Shared types, enums, interfaces
+└── consts.ts                      # Constants (event names, ICE config)
 ```
 
 
-## server side script
+***
+
+## Requirements
+
+- **Node.js** (>= 14)
+- **socket.io** - for the signaling server
+- **socket.io-client** - for the client app
+- **TypeScript** (if using or building from source)
+
+Install dependencies:
+
+for server side
+```shell
+npm install socket.io
+```
+
+for client side
+```shell
+npm install socket.io-client
+```
+
+
+***
+
+## Getting Started
+
+### 1. Server Example (Signaling Server)
+
 ```typescript
-import fs from 'node:fs';
-import path from 'node:path';
-import https from 'https';
-import express from 'express';
-import { Server as SocketIO } from 'socket.io';
-import { RTCPeerConnectionServer } from 'simple-rtc-peer-connection';
+import { Server } from 'socket.io';
+import { RTCPeerConnectionServer } from './RTCPeerConnection.server';
 
-const __dirname = import.meta.dirname;
-console.log('__dirname', __dirname);
-const app = express();
-
-app.use(express.static(path.resolve(__dirname, '../dist')));
-
-//we need a key and cert to run https
-//we generated them with mkcert
-// $ mkcert create-ca
-// $ mkcert create-cert
-const key = fs.readFileSync(path.resolve(__dirname, 'cert.key'));
-const cert = fs.readFileSync(path.resolve(__dirname, 'cert.crt'));
-
-//we changed our express setup so we can use https
-//pass the key and cert to createServer on https
-const expressServer = https.createServer({ key, cert }, app);
-//create our socket.io server... it will listen to our express port
-const io = new SocketIO(expressServer);
-expressServer.listen(8181); // https://localhost:8181
-
-console.log('Listening on port 8181');
-console.log('open url: https://localhost:8181');
+const io = new Server(3000);
 
 io.on('connection', (socket) => {
-    // console.log("Someone has connected");
-    const password = socket.handshake.auth.password;
-
-    if (password !== 'x') {
-        socket.disconnect(true);
-        return;
-    }
-
-    new RTCPeerConnectionServer(socket, socket.handshake.auth.userName);
+  const userId = socket.handshake.auth.userName || socket.id;
+  new RTCPeerConnectionServer(socket, userId);
 });
 ```
 
-in server side import the RTC peer connection server class
+- Instantiate `RTCPeerConnectionServer` for each new socket.
+- Handles offers, answers, and ICE candidate relay automatically.
+
+***
+
+### 2. Client Example
+
 ```typescript
-import { Server as SocketIO } from 'socket.io';
-import { RTCPeerConnectionServer } from 'simple-rtc-peer-connection';
+import { io } from 'socket.io-client';
+import { RTCPeerConnectionClient } from './RTCPeerConnection.client';
+
+const socket = io('http://localhost:3000');
+const rtcClient = new RTCPeerConnectionClient(socket, { userId: 'userA' });
+
+rtcClient.onOffersReceived((offers)=>{
+    const offerOptions = offers;
+    offerOptions.forEach(o => {
+        o.onClick = () => {
+            rtcClient.answerOffer().then(([localStream, remoteStream]) => {
+                // Attach localStream and remoteStream to <video> HTML elements as needed, or include them in constructur props
+            });
+        }
+    })
+    // render offerOptions options
+});
+
+
+rtcClient.call().then(([localStream, remoteStream]) => {
+  // Attach localStream and remoteStream to <video> HTML elements as needed, or include them in constructur props
+});
 ```
 
-after socket connected init instance with socket and userId
-```typescript
-new RTCPeerConnectionServer(socket, socket.handshake.auth.userName);
+- Use `call()` to request media permissions and initiate a connection.
+- Listen and respond to offers with `answerOffer()`.
+- ICE candidate and SDP negotiation is handled for you.
+
+***
+
+## Advanced Usage
+
+- **Custom video/audio constraints:**
+  Pass custom constraints to `call()` or `answerOffer()`.
+- **Custom ICE servers:**
+  Modify `PEER_CONFIGURATION` in `consts.ts` for different STUN/TURN servers.
+- **Debugging:**
+  Pass `{ debugMode: true }` to the client constructor to enable logging.
+
+***
+
+## Testing
+
+To test locally:
+
+1. Start the signaling server:
+
+```shell
+node ./src/server.js  # or use ts-node for TypeScript
 ```
 
-that it! the server singling working to connect the offers and ice candidates between 2 clients
+2. Launch two separate clients (different browsers/tabs or machines) and connect to the server as different users.
+3. Use the provided API to initiate and answer calls.
 
-Notice: the rtc peer connection must running on https server so we init that on express with some certificates that we make locally
-```typescript
-import https from 'https';
-import express from 'express';
+***
 
-const key = fs.readFileSync(path.resolve(__dirname, 'cert.key'));
-const cert = fs.readFileSync(path.resolve(__dirname, 'cert.crt'));
+## API Overview
 
-const expressServer = https.createServer({ key, cert }, app);
+| Component | Description |
+| :-- | :-- |
+| RTCPeerConnectionServer | Handles offers, answers, and ICE candidates (signaling logic for Socket.io server) |
+| RTCPeerConnectionClient | Manages media streams, SDP exchange, and ICE negotiation on the client |
+| SOCKET_EVENTS / PEER_CONFIGURATION | Constants for event names and WebRTC ICE servers |
+| Offer (interface, decs.ts) | Typed structure for WebRTC offer/answer exchange |
 
-const io = new SocketIO(expressServer);
-expressServer.listen(8181); // https://localhost:8181
 
-```
+***
 
-# Running directory of DEMO app
+## Folder/File Reference
 
-run the express https server by
+| File | Role |
+| :-- | :-- |
+| `RTCPeerConnection.server.ts` | Socket.io-based signaling server |
+| `RTCPeerConnection.client.ts` | WebRTC peer/client logic |
+| `decs.ts` | Type definitions \& enums |
+| `consts.ts` | Configurable constants |
 
-```
-npm start
-```
 
-the certificates that runs on this https is made from the following commands, therefore the browser will show warnings about not secure certificates because it not known certifications
-```
-npm run ca
-npm run cert
-```
+***
 
-to check locally changes you can run yalc commands to include the files locally as node_module package
-```
-npm run yalc:publish
-npm run yalc:attach
-```
+## Contributing
 
-now: open on OPERA browser with 2 incognito pages, make the call and answer on the second page
-Note: Opera because in chrome it's make a lot of warning and crashing like:
-* Failed to load resource: net::ERR_CONNECTION_REFUSED
+- Pull requests and issues are welcome!
+- Please open issues for bugs, suggestions, or feature requests.
 
-# Need to improve 
-* sending to specific unique user like by userId
-* add debug info logs
+***
 
-### Author 
-Hadriel Benjo
+## License
+
+MIT
+
+***
+
+Ready to build fast and robust WebRTC apps? Get started now!
+For more information, see the comments and documentation within each file.
