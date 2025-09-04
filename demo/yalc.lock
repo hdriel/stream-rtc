@@ -2,7 +2,7 @@
   "version": "v1",
   "packages": {
     "simple-rtc-peer-connection": {
-      "signature": "ed2bf399ceab05371ded777a78d3a8e4",
+      "signature": "e4c34cb04aced57242d501c0fc78feee",
       "file": true
     }
   }

@@ -22,7 +22,11 @@ const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElemen
 console.log('remoteVideoEl', localVideoEl);
 
 const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName });
-pc.onOffersReceivedCB(createOffersCB);
+pc.onOffersReceived(createOffersCB);
+const errorCallBack = (err: any) => {
+    alert(JSON.stringify(err, null, 4));
+};
+pc.onError(errorCallBack);
 
 document.querySelector('#call')?.addEventListener('click', async () => pc.call());
 
