@@ -1,5 +1,5 @@
 {
-    "name": "simple-rtc-peer-connection",
+    "name": "stream-rtc",
     "private": true,
     "version": "1.0.0",
     "type": "module",

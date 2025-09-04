@@ -4,20 +4,11 @@ import dts from 'vite-plugin-dts'; // install for this package: npm i -D @types/
 
 // https://vite.dev/config/
 export default defineConfig({
-    plugins: [
-        dts({
-            insertTypesEntry: true,
-        }),
-    ],
+    plugins: [dts({ insertTypesEntry: true })],
     build: {
         lib: {
-            // entry: {
-            //     index: resolve(__dirname, 'src/index.ts'),
-            //     client: resolve(__dirname, 'src/RTCPeerConnection.client.ts'),
-            //     server: resolve(__dirname, 'src/RTCPeerConnection.server.ts'),
-            // },
             entry: resolve(__dirname, 'src/index.ts'),
-            name: 'RTCPeerConnectionAuto',
+            name: 'StreamsRTC',
             fileName: '[name]',
             formats: ['es', 'cjs', 'umd'],
         },
