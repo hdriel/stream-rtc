@@ -1,6 +1,6 @@
-// import('./script1.ts');
+import('./script1.ts');
 // import('./script2.ts');
-import('./script3.ts');
+// import('./script3.ts');
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="container">
@@ -13,9 +13,9 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <div id="videos">
         <div id="video-wrapper">
           <div id="waiting" class="btn btn-warning">Waiting for answer...</div>
-          <video class="video-player" id="local-video" autoplay playsinline controls></video>
+          <video class="video-player" id="local-video" autoplay playsinline ></video>
         </div>
-        <video class="video-player" id="remote-video" autoplay playsinline controls></video>
+        <video class="video-player" id="remote-video" autoplay playsinline ></video>
       </div>
     </div>
 `;
