@@ -17,3 +17,8 @@ export interface Offer {
     answer: null | RTCSessionDescriptionInit;
     answererIceCandidates: any[];
 }
+
+// @ts-ignore
+export enum RTCPeerConnectionError {
+    fetchUserMedia,
+}
