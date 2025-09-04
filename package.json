@@ -1,5 +1,5 @@
 {
-    "name": "stream-rtc",
+    "name": "rtc-stream",
     "private": true,
     "version": "1.0.0",
     "type": "module",
@@ -17,10 +17,8 @@
     "types": "./dist/index.d.ts",
     "exports": {
         ".": {
-            "default": "./dist/index.js",
             "import": "./dist/index.js",
-            "require": "./dist/index.cjs",
-            "types": "./dist/index.d.ts"
+            "require": "./dist/index.cjs"
         }
     },
     "devDependencies": {
