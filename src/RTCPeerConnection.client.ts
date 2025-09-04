@@ -60,16 +60,16 @@ export class RTCPeerConnectionClient {
         console.debug(...args);
     }
 
-    public async call(constraints?: MediaStreamConstraints) {
+    public async call(constraints?: MediaStreamConstraints): Promise<[MediaStream, MediaStream]> {
         try {
             this.debug(
                 'request for user permission to access for constraints:',
                 constraints ?? this.DEFAULT_CONSTRAINTS
             );
-            const stream = await this.fetchUserMedia(constraints);
+            const localStream = await this.fetchUserMedia(constraints);
 
             this.debug('Create RTC Peer Connection');
-            await this.createPeerConnection();
+            const remoteStream = await this.createPeerConnection();
             this.debug('peerConnection is all set with our STUN servers sent over');
             if (!this.peerConnection) {
                 throw new Error('Peer connection not found');
@@ -86,7 +86,7 @@ export class RTCPeerConnectionClient {
             this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
             this.socket.emit(this.socketEventsMapper.newOffer, offer);
 
-            return stream;
+            return [localStream, remoteStream];
         } catch (err: any) {
             console.error(err);
             throw err;

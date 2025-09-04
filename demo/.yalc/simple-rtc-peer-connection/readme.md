@@ -30,7 +30,7 @@ const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
 console.log('localVideoEl', localVideoEl);
 
 const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
-console.log('remoteVideoEl', localVideoEl);
+console.log('remoteVideoEl', remoteVideoEl);
 
 const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName });
 pc.onOffersReceivedCB(createOffersCB);

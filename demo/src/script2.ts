@@ -15,13 +15,11 @@ const url = `https://${host}:${port}/`;
 const socket = io.connect(url, { auth: { userName, password } });
 console.log('socket connecting on url:', url);
 
-const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
-console.log('localVideoEl', localVideoEl);
-
-const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
-console.log('remoteVideoEl', localVideoEl);
-
-const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName });
+const pc = new RTCPeerConnectionClient(socket, {
+    localVideoQuerySelector: '#local-video',
+    remoteVideoQuerySelector: '#remote-video',
+    userId: userName,
+});
 pc.onOffersReceived(createOffersCB);
 const errorCallBack = (err: any) => {
     alert(JSON.stringify(err, null, 4));
