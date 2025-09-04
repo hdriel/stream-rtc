@@ -1,0 +1,44 @@
+name: Publish to NPM
+
+on:
+    push:
+        branches: ['main']
+
+jobs:
+    publish:
+        if: "!contains(github.event.head_commit.message, 'no-build')" # skip if 'no-build' is present
+        runs-on: ubuntu-latest
+        permissions:
+            packages: write
+            contents: read
+        steps:
+          - name: checkout
+            uses: actions/checkout@v3
+
+          - name: Create temporary package.json
+            run: cp package.json temp-package.json
+
+          - name: Modify temporary package.json
+            run: |
+              jq 'del(.scripts.prepare)' temp-package.json > package.json
+
+          - name: setup node
+            uses: actions/setup-node@v3
+            with:
+              node-version: 18
+              registry-url: https://registry.npmjs.org/
+              scope: '@hdriel'
+
+          - name: installing packages
+            run: | # Install npm packages
+              npm i -g pnpm
+              pnpm install --frozen-lockfile --prod --ignore-scripts
+
+          - name: building package
+            run: | # build lib output before publish
+              pnpm run build
+
+          - name: publish step
+            run: npm publish
+            env:
+                NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
