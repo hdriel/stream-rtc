@@ -1,5 +1,5 @@
 import type { Socket as SocketIO } from 'socket.io';
-import type { SocketEventType, Offer } from './decs.ts';
+import type { SocketEventType, Offer, IceCandidateOffer } from './decs.ts';
 import { SOCKET_EVENTS } from './consts.ts';
 
 export class RTCPeerConnectionServer {
@@ -37,10 +37,10 @@ export class RTCPeerConnectionServer {
     private init() {
         this.socket.on(this.socketEventsMapper.newOffer, (newOffer: RTCSessionDescriptionInit) => {
             RTCPeerConnectionServer.offers.push({
-                offererUserName: this.userId,
+                offererUserId: this.userId,
                 offer: newOffer,
                 offerIceCandidates: [],
-                answererUserName: '',
+                answererUserId: '',
                 answer: null,
                 answererIceCandidates: [],
             });
@@ -59,7 +59,7 @@ export class RTCPeerConnectionServer {
                 console.log(offerObj);
                 //emit this answer (offerObj) back to CLIENT1
                 //in order to do that, we need CLIENT1's socketid
-                const socketIdToAnswer = RTCPeerConnectionServer.connectedSockets[offerObj.offererUserName];
+                const socketIdToAnswer = RTCPeerConnectionServer.connectedSockets[offerObj.offererUserId];
                 if (!socketIdToAnswer) {
                     console.log('No matching socket');
                     return;
@@ -68,7 +68,7 @@ export class RTCPeerConnectionServer {
 
                 //we find the offer to update so we can emit it
                 const offerToUpdate = RTCPeerConnectionServer.offers.find(
-                    (o) => o.offererUserName === offerObj.offererUserName
+                    (o) => o.offererUserId === offerObj.offererUserId
                 );
                 if (!offerToUpdate) {
                     console.log('No OfferToUpdate');
@@ -77,53 +77,56 @@ export class RTCPeerConnectionServer {
                 //send back to the answerer all the iceCandidates we have already collected
                 ackFunction(offerToUpdate.offerIceCandidates);
                 offerToUpdate.answer = offerObj.answer;
-                offerToUpdate.answererUserName = this.userId;
+                offerToUpdate.answererUserId = this.userId;
                 //socket has a .to() which allows emiting to a "room"
                 //every socket has it's own room
                 this.socket.to(socketIdToAnswer).emit(this.socketEventsMapper.answerResponse, offerToUpdate);
             }
         );
 
-        this.socket.on(this.socketEventsMapper.sendIceCandidateToSignalingServer, (iceCandidateObj) => {
-            const { didIOffer, iceUserName, iceCandidate } = iceCandidateObj;
-            // console.log(iceCandidate);
-            if (didIOffer) {
-                //this ice is coming from the offerer. Send to the answerer
-                const offerInOffers = RTCPeerConnectionServer.offers.find((o) => o.offererUserName === iceUserName);
-                if (offerInOffers) {
-                    offerInOffers.offerIceCandidates.push(iceCandidate);
-                    // 1. When the answerer answers, all existing ice candidates are sent
-                    // 2. Any candidates that come in after the offer has been answered, will be passed through
-                    if (offerInOffers.answererUserName) {
-                        //pass it through to the other socket
-                        const socketIdToSendTo =
-                            RTCPeerConnectionServer.connectedSockets[offerInOffers.answererUserName];
+        this.socket.on(
+            this.socketEventsMapper.sendIceCandidateToSignalingServer,
+            (iceCandidateObj: IceCandidateOffer) => {
+                const { didIOffer, iceUserId, iceCandidate } = iceCandidateObj;
+                // console.log(iceCandidate);
+                if (didIOffer) {
+                    //this ice is coming from the offerer. Send to the answerer
+                    const offerInOffers = RTCPeerConnectionServer.offers.find((o) => o.offererUserId === iceUserId);
+                    if (offerInOffers) {
+                        offerInOffers.offerIceCandidates.push(iceCandidate);
+                        // 1. When the answerer answers, all existing ice candidates are sent
+                        // 2. Any candidates that come in after the offer has been answered, will be passed through
+                        if (offerInOffers.answererUserId) {
+                            //pass it through to the other socket
+                            const socketIdToSendTo =
+                                RTCPeerConnectionServer.connectedSockets[offerInOffers.answererUserId];
 
-                        if (socketIdToSendTo) {
-                            this.socket
-                                .to(socketIdToSendTo)
-                                .emit(this.socketEventsMapper.receivedIceCandidateFromServer, iceCandidate);
-                        } else {
-                            console.log('Ice candidate recieved but could not find answere');
+                            if (socketIdToSendTo) {
+                                this.socket
+                                    .to(socketIdToSendTo)
+                                    .emit(this.socketEventsMapper.receivedIceCandidateFromServer, iceCandidate);
+                            } else {
+                                console.log('Ice candidate recieved but could not find answere');
+                            }
                         }
                     }
-                }
-            } else {
-                //this ice is coming from the answerer. Send to the offerer
-                //pass it through to the other socket
-                const offerInOffers = RTCPeerConnectionServer.offers.find((o) => o.answererUserName === iceUserName);
-                const socketIdToSendTo =
-                    offerInOffers?.offererUserName &&
-                    RTCPeerConnectionServer.connectedSockets[offerInOffers?.offererUserName];
-
-                if (socketIdToSendTo) {
-                    this.socket
-                        .to(socketIdToSendTo)
-                        .emit(this.socketEventsMapper.receivedIceCandidateFromServer, iceCandidate);
                 } else {
-                    console.log('Ice candidate received but could not find offerer');
+                    //this ice is coming from the answerer. Send to the offerer
+                    //pass it through to the other socket
+                    const offerInOffers = RTCPeerConnectionServer.offers.find((o) => o.answererUserId === iceUserId);
+                    const socketIdToSendTo =
+                        offerInOffers?.offererUserId &&
+                        RTCPeerConnectionServer.connectedSockets[offerInOffers?.offererUserId];
+
+                    if (socketIdToSendTo) {
+                        this.socket
+                            .to(socketIdToSendTo)
+                            .emit(this.socketEventsMapper.receivedIceCandidateFromServer, iceCandidate);
+                    } else {
+                        console.log('Ice candidate received but could not find offerer');
+                    }
                 }
             }
-        });
+        );
     }
 }

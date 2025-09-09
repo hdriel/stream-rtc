@@ -1,5 +1,5 @@
 import type { Socket } from 'socket.io-client';
-import { type Offer, RTCPeerConnectionError, type SocketEventType } from './decs.ts';
+import { type IceCandidateOffer, type Offer, RTCPeerConnectionError, type SocketEventType } from './decs.ts';
 import { PEER_CONFIGURATION, SOCKET_EVENTS } from './consts.ts';
 
 export class RTCPeerConnectionClient {
@@ -281,11 +281,11 @@ export class RTCPeerConnectionClient {
             );
             this.socket.emit(this.socketEventsMapper.sendIceCandidateToSignalingServer, {
                 iceCandidate: event.candidate,
-                iceUserName: this.userId,
+                iceUserId: this.userId,
                 didIOffer: this.didIOffer,
                 callToUserIds: ([] as string[]).concat(this.userId, this.callToUserIds).filter((v) => v),
                 callToRoomId: this.callToRoomId,
-            });
+            } as IceCandidateOffer);
         });
 
         this.peerConnection.addEventListener('track', (trackEvent) => {
