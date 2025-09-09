@@ -3,7 +3,7 @@ import { resolve } from 'pathe'; // install for this package: npm i -D @types/no
 import dts from 'vite-plugin-dts'; // install for this package: npm i -D @types/node
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     plugins: [dts({ insertTypesEntry: true })],
     build: {
         lib: {
@@ -12,5 +12,10 @@ export default defineConfig({
             fileName: '[name]',
             formats: ['es', 'cjs', 'umd'],
         },
+        minify: mode !== 'development',
+        terserOptions: {
+            compress: mode !== 'development',
+            mangle: mode !== 'development',
+        },
     },
-});
+}));

@@ -30,7 +30,6 @@
         "vite": "^7.1.2"
     },
     "dependencies": {
-        "simple-rtc-peer-connection": "file:.yalc/simple-rtc-peer-connection",
         "stream-rtc": "file:.yalc/stream-rtc"
     }
 }

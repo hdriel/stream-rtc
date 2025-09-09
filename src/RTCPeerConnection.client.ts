@@ -42,7 +42,9 @@ export class RTCPeerConnectionClient {
         this.userId = elements.userId;
         this.localVideoElement = elements.localVideoElement;
         this.localVideoQuerySelector = elements.localVideoQuerySelector;
-        this.remoteVideoElements = ([] as HTMLVideoElement[]).concat(elements.remoteVideoElement as HTMLVideoElement);
+        this.remoteVideoElements = ([] as HTMLVideoElement[])
+            .concat(elements.remoteVideoElement as HTMLVideoElement)
+            .filter((v) => v);
         this.remoteVideoQuerySelector = elements.remoteVideoElementsQuerySelector;
 
         this.debugMode = options.debugMode;
@@ -113,7 +115,10 @@ export class RTCPeerConnectionClient {
                 this.didIOffer = true;
 
                 this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
-                this.socket.emit(this.socketEventsMapper.newOffer, offer);
+                this.socket.emit(this.socketEventsMapper.newOffer, offer, {
+                    roomId: this.callToRoomId,
+                    userIds: this.callToUserIds,
+                });
 
                 resolve([localStream, ...remoteStreams]);
             } catch (err: any) {
