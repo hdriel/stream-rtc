@@ -87,11 +87,14 @@ export class RTCPeerConnectionServer {
         this.socket.on(
             this.socketEventsMapper.sendIceCandidateToSignalingServer,
             (iceCandidateObj: IceCandidateOffer) => {
-                const { didIOffer, iceUserId, iceCandidate } = iceCandidateObj;
+                // todo: check to send the emit to specific userId/roomId
+                // @ts-ignore
+                const { didIOffer, iceUserId, iceCandidate, callToUserIds, callToRoomId } = iceCandidateObj;
                 // console.log(iceCandidate);
                 if (didIOffer) {
                     //this ice is coming from the offerer. Send to the answerer
                     const offerInOffers = RTCPeerConnectionServer.offers.find((o) => o.offererUserId === iceUserId);
+
                     if (offerInOffers) {
                         offerInOffers.offerIceCandidates.push(iceCandidate);
                         // 1. When the answerer answers, all existing ice candidates are sent
