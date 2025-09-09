@@ -25,7 +25,11 @@ function errorCallBack(err: any) {
     alert(JSON.stringify(err, null, 4));
 }
 
-const pc = new RTCPeerConnectionClient(socket, { localVideoElement, remoteVideoElement, userId: userName });
+const pc = new RTCPeerConnectionClient(
+    socket,
+    { localVideoElement, remoteVideoElement, userId: userName },
+    { debugMode: true }
+);
 pc.onOffersReceived(createOffersCB);
 pc.onError(errorCallBack);
 

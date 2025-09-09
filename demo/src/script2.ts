@@ -19,11 +19,15 @@ function errorCallBack(err: any) {
     alert(JSON.stringify(err, null, 4));
 }
 
-const pc = new RTCPeerConnectionClient(socket, {
-    localVideoQuerySelector: '#local-video',
-    remoteVideoElementsQuerySelector: '#remote-video',
-    userId: userName,
-});
+const pc = new RTCPeerConnectionClient(
+    socket,
+    {
+        localVideoQuerySelector: '#local-video',
+        remoteVideoElementsQuerySelector: '#remote-video',
+        userId: userName,
+    },
+    { debugMode: true }
+);
 pc.onOffersReceived(createOffersCB);
 pc.onError(errorCallBack);
 

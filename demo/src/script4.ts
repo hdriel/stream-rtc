@@ -28,7 +28,7 @@ function errorCallBack(err: any) {
     alert(JSON.stringify(err, null, 4));
 }
 
-const pc = new RTCPeerConnectionClient(socket, { userId: userName });
+const pc = new RTCPeerConnectionClient(socket, { userId: userName }, { debugMode: true });
 pc.onOffersReceived(createOffersCB);
 pc.onRemoteStreamAdded((remoteStream) => {
     const newRemoteVideo = document.createElement('video');
