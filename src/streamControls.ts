@@ -1,4 +1,4 @@
-export class StreamControls extends MediaStream {
+export class StreamControls {
     public localStream: MediaStream | null = null;
     private videoEl?: HTMLVideoElement | null;
     private readonly videoQuerySelector?: string;
@@ -12,7 +12,6 @@ export class StreamControls extends MediaStream {
             debugMode?: boolean;
         } = {}
     ) {
-        super();
         this.localStream = localStream;
         this.videoEl = props.videoEl;
         this.videoQuerySelector = props.videoQuerySelector;
