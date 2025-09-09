@@ -5,7 +5,7 @@ import { PEER_CONFIGURATION, SOCKET_EVENTS } from './consts.ts';
 export class RTCPeerConnectionClient {
     private readonly socket: Socket;
     public localStream: MediaStream | null = null;
-    public remoteStreams: Record<string, MediaStream> = {}; //a var to hold the remote video stream
+    public remoteStreams: MediaStream[] = []; //a var to hold the remote video stream
     public peerConnection: RTCPeerConnection | null = null; //the peerConnection that the two clients use to talk
     private readonly DEFAULT_CONSTRAINTS: MediaStreamConstraints = { video: true, audio: true };
     private readonly socketEventsMapper: SocketEventType;
@@ -15,10 +15,9 @@ export class RTCPeerConnectionClient {
     private readonly remoteVideoElements?: HTMLVideoElement[];
     private readonly remoteVideoQuerySelector?: string;
     private readonly offerCallBacks: Set<(offers: Offer[]) => void>;
-    private readonly errorCallBacks: Set<(offers: Offer[]) => void>;
+    private readonly errorCallBacks: Set<(error: Error) => void>;
     private readonly remoteStreamsCallBacks: Set<(remoteStreams: MediaStream[]) => void>;
     private didIOffer: boolean = false;
-    private readonly remoteVideoElementUserIdAttribute: string;
     private readonly userId: string = '';
     private callToUserIds: string[] = [];
     private callToRoomId: string | undefined;
@@ -31,7 +30,6 @@ export class RTCPeerConnectionClient {
             localVideoElement?: HTMLVideoElement;
             localVideoQuerySelector?: string;
             remoteVideoElement?: HTMLVideoElement | HTMLVideoElement[];
-            remoteVideoElementUserIdAttribute?: string;
             remoteVideoElementsQuerySelector?: string;
         },
         options: {
@@ -42,7 +40,6 @@ export class RTCPeerConnectionClient {
     ) {
         this.socket = socket;
         this.userId = elements.userId;
-        this.remoteVideoElementUserIdAttribute = elements.remoteVideoElementUserIdAttribute = 'data-user-id';
         this.localVideoElement = elements.localVideoElement;
         this.localVideoQuerySelector = elements.localVideoQuerySelector;
         this.remoteVideoElements = ([] as HTMLVideoElement[]).concat(elements.remoteVideoElement as HTMLVideoElement);
@@ -85,7 +82,7 @@ export class RTCPeerConnectionClient {
         this.callToUserIds = ([] as string[]).concat(userId as string).filter((v) => v);
         this.callToRoomId = roomId;
 
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             try {
                 this.debug(
                     'request for user permission to access for constraints:',
@@ -98,7 +95,12 @@ export class RTCPeerConnectionClient {
                 this.debug('peerConnection is all set with our STUN servers sent over');
 
                 if (!this.peerConnection) {
-                    reject(new Error('Peer connection not found'));
+                    console.error('failed on call function', 'Peer connection not found');
+                    for (const cb of [...this.errorCallBacks].filter((cb) => typeof cb === 'function')) {
+                        this.debug(`call fire on errorCallBacks cb function`, cb.name);
+                        cb?.(new Error('Peer connection not found'));
+                    }
+                    resolve([]);
                     return;
                 }
 
@@ -113,10 +115,14 @@ export class RTCPeerConnectionClient {
                 this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
                 this.socket.emit(this.socketEventsMapper.newOffer, offer);
 
-                resolve([localStream, ...Object.values(remoteStreams)]);
+                resolve([localStream, ...remoteStreams]);
             } catch (err: any) {
-                console.error(err);
-                reject(err);
+                console.error(`failed on call function`, err);
+                for (const cb of [...this.errorCallBacks].filter((cb) => typeof cb === 'function')) {
+                    this.debug(`call fire on errorCallBacks cb function`, cb.name);
+                    cb?.(err);
+                }
+                resolve([]);
             }
         });
     }
@@ -159,7 +165,7 @@ export class RTCPeerConnectionClient {
 
         this.debug('offerIceCandidates', offerIceCandidates);
 
-        return [localStream, ...Object.values(remoteStreams)];
+        return [localStream, ...remoteStreams];
     }
 
     private async addAnswer(offerObj: Offer) {
@@ -175,7 +181,7 @@ export class RTCPeerConnectionClient {
                 cb.name
             );
 
-            this.remoteStreams[offerObj.answererUserName] ||= new MediaStream();
+            this.remoteStreams.push(new MediaStream());
             cb?.(Object.values(this.remoteStreams));
         }
     }
@@ -223,12 +229,11 @@ export class RTCPeerConnectionClient {
         const peerConnection = this.peerConnection as RTCPeerConnection;
         this.debug('peerConnection initialized:', peerConnection.signalingState);
 
-        this.remoteStreams = {};
+        this.remoteStreams = [];
 
         if (this.remoteVideoElements?.length) {
             this.remoteVideoElements.forEach((remoteVideoElement: HTMLVideoElement, index) => {
-                const userId = remoteVideoElement.getAttribute(this.remoteVideoElementUserIdAttribute) ?? index;
-                this.remoteStreams[userId] = remoteVideoElement.srcObject = new MediaStream();
+                this.remoteStreams[index] = remoteVideoElement.srcObject = new MediaStream();
             });
         } else if (this.remoteVideoQuerySelector) {
             const elements = document.querySelectorAll(this.remoteVideoQuerySelector);
@@ -236,8 +241,7 @@ export class RTCPeerConnectionClient {
 
             if (remoteVideoElements.length) {
                 remoteVideoElements.forEach((remoteVideoElement: HTMLVideoElement, index) => {
-                    const userId = remoteVideoElement.getAttribute(this.remoteVideoElementUserIdAttribute) ?? index;
-                    this.remoteStreams[userId] ||= new MediaStream();
+                    this.remoteStreams[index] ||= new MediaStream();
                     remoteVideoElement.srcObject = this.remoteStreams[index];
                 });
             } else {
@@ -287,8 +291,8 @@ export class RTCPeerConnectionClient {
             this.debug('Got a track from the other peer!', trackEvent);
             trackEvent.streams.forEach((stream: MediaStream & { userId?: string }, index: number) => {
                 stream.getTracks().forEach((track: MediaStreamTrack) => {
-                    this.remoteStreams[stream.userId ?? index] ||= new MediaStream();
-                    this.remoteStreams[stream.userId ?? index]?.addTrack(track);
+                    this.remoteStreams[index] ||= new MediaStream();
+                    this.remoteStreams[index]?.addTrack(track);
                     this.debug('see something track data on remote stream video!!', track);
                 });
             });
