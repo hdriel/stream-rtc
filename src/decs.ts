@@ -12,10 +12,10 @@ export type SocketEventType = Record<EVENT_NAME, string>;
 export interface Offer {
     offererUserName: string;
     offer: RTCSessionDescriptionInit;
-    offerIceCandidates: any[];
+    offerIceCandidates: RTCIceCandidate[];
     answererUserName: string;
     answer: null | RTCSessionDescriptionInit;
-    answererIceCandidates: any[];
+    answererIceCandidates: RTCIceCandidate[];
 }
 
 // @ts-ignore
