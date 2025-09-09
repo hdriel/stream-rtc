@@ -73,7 +73,13 @@ export class RTCPeerConnectionClient {
     }
 
     public async call(
-        { userId, roomId }: { userId?: string | string[]; roomId?: string },
+        {
+            userId,
+            roomId,
+        }:
+            | { userId?: string | string[]; roomId: string }
+            | { userId: string | string[]; roomId?: string }
+            | { userId?: string | string[]; roomId?: string } = {},
         constraints?: MediaStreamConstraints
     ): Promise<MediaStream[]> {
         this.callToUserIds = ([] as string[]).concat(userId as string).filter((v) => v);

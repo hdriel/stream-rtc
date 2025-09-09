@@ -17,7 +17,7 @@ console.log('socket connecting on url:', url);
 
 const pc = new RTCPeerConnectionClient(socket, {
     localVideoQuerySelector: '#local-video',
-    remoteVideoQuerySelector: '#remote-video',
+    remoteVideoElementsQuerySelector: '#remote-video',
     userId: userName,
 });
 pc.onOffersReceived(createOffersCB);

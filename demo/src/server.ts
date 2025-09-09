@@ -3,7 +3,7 @@ import path from 'node:path';
 import https from 'https';
 import express from 'express';
 import { Server as SocketIO } from 'socket.io';
-import { RTCPeerConnectionServer } from 'simple-rtc-peer-connection';
+import { RTCPeerConnectionServer } from 'stream-rtc';
 
 const __dirname = import.meta.dirname;
 console.log('__dirname', __dirname);

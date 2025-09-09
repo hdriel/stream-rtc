@@ -8,7 +8,7 @@
         "preview": "vite preview",
         "clean": "rimraf ./dist",
         "yalc:publish": "yalc publish --private --push",
-        "yalc:build-publish": "npm run build && npm run yalc:publish"
+        "yalc:build-publish": "npm run build && npm run yalc:publish && cd demo && npm run yalc:attach"
     },
     "files": [
         "dist"
