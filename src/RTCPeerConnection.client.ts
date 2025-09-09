@@ -197,9 +197,8 @@ export class RTCPeerConnectionClient {
                 this.localVideoElement.srcObject = stream;
             } else if (this.localVideoQuerySelector) {
                 const localVideoEl: HTMLVideoElement | null = document.querySelector(this.localVideoQuerySelector);
-                if (localVideoEl) {
-                    localVideoEl.srcObject = stream;
-                } else {
+                if (localVideoEl) localVideoEl.srcObject = stream;
+                else {
                     console.warn(
                         `NOTE: document.querySelector(${this.localVideoQuerySelector}) => null, video element not found!`
                     );
@@ -217,9 +216,9 @@ export class RTCPeerConnectionClient {
             }
 
             return stream;
-        } catch (err) {
+        } catch (err: any) {
             this.debug('user rejected permissions for access media devices');
-            throw [RTCPeerConnectionError.fetchUserMedia, err];
+            throw err?.message ?? err;
         }
     }
 
