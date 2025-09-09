@@ -35,23 +35,44 @@ export class RTCPeerConnectionServer {
     }
 
     private init() {
-        this.socket.on(this.socketEventsMapper.newOffer, (newOffer: RTCSessionDescriptionInit) => {
-            RTCPeerConnectionServer.offers.push({
-                offererUserId: this.userId,
-                offer: newOffer,
-                offerIceCandidates: [],
-                answererUserId: '',
-                answer: null,
-                answererIceCandidates: [],
-            });
-            // console.log(newOffer.sdp.slice(50))
-            //send out to all connected sockets EXCEPT the caller
-            // todo: check to emit for specific sockets/room
-            this.socket.broadcast.emit(
-                this.socketEventsMapper.newOfferAwaiting,
-                RTCPeerConnectionServer.offers.slice(-1)
-            );
-        });
+        this.socket.on(
+            this.socketEventsMapper.newOffer,
+            (newOffer: RTCSessionDescriptionInit, { roomId, userIds }: { roomId: string; userIds: string[] }) => {
+                RTCPeerConnectionServer.offers.push({
+                    offererUserId: this.userId,
+                    offer: newOffer,
+                    offerIceCandidates: [],
+                    answers: {},
+                    toUserIds: userIds,
+                    toRoomId: roomId,
+                });
+                // console.log(newOffer.sdp.slice(50))
+                //send out to all connected sockets EXCEPT the caller
+                // todo: check to emit for specific sockets/room
+                if (roomId) {
+                    this.socket
+                        .to(roomId)
+                        .emit(this.socketEventsMapper.newOfferAwaiting, RTCPeerConnectionServer.offers.slice(-1));
+                } else if (userIds?.length) {
+                    userIds
+                        .map((userId) => RTCPeerConnectionServer.connectedSockets[userId])
+                        .filter((v) => v)
+                        .forEach((socketId) => {
+                            this.socket
+                                .to(socketId)
+                                .emit(
+                                    this.socketEventsMapper.newOfferAwaiting,
+                                    RTCPeerConnectionServer.offers.slice(-1)
+                                );
+                        });
+                } else {
+                    this.socket.broadcast.emit(
+                        this.socketEventsMapper.newOfferAwaiting,
+                        RTCPeerConnectionServer.offers.slice(-1)
+                    );
+                }
+            }
+        );
 
         this.socket.on(
             this.socketEventsMapper.newAnswer,
@@ -76,8 +97,10 @@ export class RTCPeerConnectionServer {
                 }
                 //send back to the answerer all the iceCandidates we have already collected
                 ackFunction(offerToUpdate.offerIceCandidates);
-                offerToUpdate.answer = offerObj.answer;
-                offerToUpdate.answererUserId = this.userId;
+                offerToUpdate.answers[this.userId] = {
+                    sdp: offerObj.answers[this.userId].sdp,
+                    iceCandidates: [],
+                };
                 //socket has a .to() which allows emiting to a "room"
                 //every socket has it's own room
                 this.socket.to(socketIdToAnswer).emit(this.socketEventsMapper.answerResponse, offerToUpdate);
@@ -99,24 +122,24 @@ export class RTCPeerConnectionServer {
                         offerInOffers.offerIceCandidates.push(iceCandidate);
                         // 1. When the answerer answers, all existing ice candidates are sent
                         // 2. Any candidates that come in after the offer has been answered, will be passed through
-                        if (offerInOffers.answererUserId) {
-                            //pass it through to the other socket
-                            const socketIdToSendTo =
-                                RTCPeerConnectionServer.connectedSockets[offerInOffers.answererUserId];
-
-                            if (socketIdToSendTo) {
-                                this.socket
-                                    .to(socketIdToSendTo)
-                                    .emit(this.socketEventsMapper.receivedIceCandidateFromServer, iceCandidate);
-                            } else {
-                                console.log('Ice candidate recieved but could not find answere');
-                            }
-                        }
+                        const userIds = Object.keys(offerInOffers.answers);
+                        userIds
+                            .map((userId) => RTCPeerConnectionServer.connectedSockets[userId])
+                            .filter((v) => v)
+                            .forEach((socketIdToSendTo) => {
+                                if (socketIdToSendTo) {
+                                    this.socket
+                                        .to(socketIdToSendTo)
+                                        .emit(this.socketEventsMapper.receivedIceCandidateFromServer, iceCandidate);
+                                } else {
+                                    console.log('Ice candidate recieved but could not find answere');
+                                }
+                            });
                     }
                 } else {
                     //this ice is coming from the answerer. Send to the offerer
                     //pass it through to the other socket
-                    const offerInOffers = RTCPeerConnectionServer.offers.find((o) => o.answererUserId === iceUserId);
+                    const offerInOffers = RTCPeerConnectionServer.offers.find((o) => o.answers[iceUserId]?.sdp);
                     const socketIdToSendTo =
                         offerInOffers?.offererUserId &&
                         RTCPeerConnectionServer.connectedSockets[offerInOffers?.offererUserId];

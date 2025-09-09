@@ -15,9 +15,13 @@ export interface Offer {
     offererUserId: string;
     offer: RTCSessionDescriptionInit;
     offerIceCandidates: RTCIceCandidate[];
-    answererUserId: string;
-    answer: null | RTCSessionDescriptionInit;
-    answererIceCandidates: RTCIceCandidate[];
+    answers: Record<
+        string,
+        {
+            sdp: null | RTCSessionDescriptionInit;
+            iceCandidates: RTCIceCandidate[];
+        }
+    >;
 }
 
 export interface IceCandidateOffer {

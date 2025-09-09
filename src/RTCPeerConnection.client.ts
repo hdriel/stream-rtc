@@ -113,7 +113,10 @@ export class RTCPeerConnectionClient {
                 this.didIOffer = true;
 
                 this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
-                this.socket.emit(this.socketEventsMapper.newOffer, offer);
+                this.socket.emit(this.socketEventsMapper.newOffer, offer, {
+                    roomId: this.callToRoomId,
+                    userIds: this.callToUserIds,
+                });
 
                 resolve([localStream, ...remoteStreams]);
             } catch (err: any) {
