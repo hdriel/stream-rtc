@@ -153,6 +153,19 @@ node ./src/server.js  # or use ts-node for TypeScript
 
 ***
 
+how to allow Chrome use camera/min on untrast https localhost certificate
+
+1. go chrome flags [click here](chrome://flags/#unsafely-treat-insecure-origin-as-secure)
+![Logger Output](readme-assets/chrome.webp)
+ 
+2. add your specific url like: https://localhost:8181
+3. then refresh button will appear click it 
+4. done! go to your chrome host and use camera! 
+![Logger Output](readme-assets/chrome-permission.webp)
+
+
+***
+
 ## Contributing
 
 - Pull requests and issues are welcome!
