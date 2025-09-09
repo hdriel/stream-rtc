@@ -1,6 +1,7 @@
 import('./script1.ts');
 // import('./script2.ts');
 // import('./script3.ts');
+// import('./script4.ts');
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="container">

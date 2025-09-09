@@ -16,7 +16,7 @@ export class RTCPeerConnectionClient {
     private readonly remoteVideoQuerySelector?: string;
     private readonly offerCallBacks: Set<(offers: Offer[]) => void>;
     private readonly errorCallBacks: Set<(error: Error) => void>;
-    private readonly remoteStreamsCallBacks: Set<(remoteStreams: MediaStream[]) => void>;
+    private readonly remoteStreamAddedCallBacks: Set<(remoteStream: MediaStream) => void>;
     private didIOffer: boolean = false;
     private readonly userId: string = '';
     private callToUserIds: string[] = [];
@@ -51,7 +51,7 @@ export class RTCPeerConnectionClient {
 
         this.offerCallBacks = new Set();
         this.errorCallBacks = new Set();
-        this.remoteStreamsCallBacks = new Set();
+        this.remoteStreamAddedCallBacks = new Set();
 
         this.init();
     }
@@ -175,14 +175,16 @@ export class RTCPeerConnectionClient {
         await this.peerConnection?.setRemoteDescription(offerObj.answer as RTCSessionDescriptionInit);
         this.debug('peerConnection.signalingState', this.peerConnection?.signalingState);
 
-        for (const cb of [...this.remoteStreamsCallBacks].filter((cb) => typeof cb === 'function')) {
+        for (const cb of [...this.remoteStreamAddedCallBacks].filter((cb) => typeof cb === 'function')) {
             this.debug(
                 `socket.on(${this.socketEventsMapper.newOfferAwaiting}) fire onOffersReceived cb function`,
                 cb.name
             );
 
-            this.remoteStreams.push(new MediaStream());
-            cb?.(Object.values(this.remoteStreams));
+            const remoteStream = new MediaStream();
+            this.remoteStreams.push(remoteStream);
+
+            cb?.(remoteStream);
         }
     }
 
@@ -333,13 +335,13 @@ export class RTCPeerConnectionClient {
         this.debug('onOffersReceived function callback removed:', cb.name);
     }
 
-    public onRemoteStreams(cb: (remoteStreams: MediaStream[]) => void) {
-        this.remoteStreamsCallBacks.add(cb);
-        this.debug('onRemoteStreams function callback added to handle answerer for caller:', cb.name);
+    public onRemoteStreamAdded(cb: (remoteStream: MediaStream) => void) {
+        this.remoteStreamAddedCallBacks.add(cb);
+        this.debug('onRemoteStreamAdded function callback added to handle answerer for caller:', cb.name);
     }
-    public offRemoteStreams(cb: (remoteStreams: MediaStream[]) => void) {
-        this.remoteStreamsCallBacks.delete(cb);
-        this.debug('onOffersReceived function callback removed:', cb.name);
+    public offRemoteStreamAdded(cb: (remoteStream: MediaStream) => void) {
+        this.remoteStreamAddedCallBacks.delete(cb);
+        this.debug('offRemoteStreamAdded function callback removed:', cb.name);
     }
 
     private init() {
