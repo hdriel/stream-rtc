@@ -12,5 +12,10 @@ export default defineConfig({
             fileName: '[name]',
             formats: ['es', 'cjs', 'umd'],
         },
+        minify: false,
+        terserOptions: {
+            compress: false,
+            mangle: false,
+        },
     },
 });

@@ -4,7 +4,7 @@
     "type": "module",
     "description": " RTCPeerConnectionClient/RTCPeerConnectionServer: simple usage RTC peer connection to handle only what we need without to enter the details like STUN SDP ICE and so on, also great handler for stream functionality in classes like: ScreenRecorder ShareScreen StreamControls",
     "scripts": {
-        "build": "tsc && vite build",
+        "build": "tsc && vite build --mode=development",
         "preview": "vite preview",
         "clean": "rimraf ./dist",
         "yalc:publish": "yalc publish --private --push",

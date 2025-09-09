@@ -41,7 +41,7 @@ function createOffersCB(offers: Offer[]) {
     offers.forEach((o) => {
         console.log(o);
         const newOfferEl = document.createElement('div');
-        newOfferEl.innerHTML = `<button class="btn btn-success col-1">Answer ${o.offererUserName}</button>`;
+        newOfferEl.innerHTML = `<button class="btn btn-success col-1">Answer ${o.offererUserId}</button>`;
         newOfferEl.addEventListener('click', async () => {
             const [localStream, remoteStream] = await pc.answerOffer(o);
             localVideoEl.srcObject = localStream;
