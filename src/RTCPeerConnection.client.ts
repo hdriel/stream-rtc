@@ -5,32 +5,34 @@ import { PEER_CONFIGURATION, SOCKET_EVENTS } from './consts.ts';
 export class RTCPeerConnectionClient {
     private readonly socket: Socket;
     public localStream: MediaStream | null = null;
-    public remoteStream: MediaStream | null = null; //a var to hold the remote video stream
+    public remoteStreams: Record<string, MediaStream> = {}; //a var to hold the remote video stream
     public peerConnection: RTCPeerConnection | null = null; //the peerConnection that the two clients use to talk
-    private readonly DEFAULT_CONSTRAINTS: MediaStreamConstraints = {
-        video: true,
-        // audio: true,
-    };
+    private readonly DEFAULT_CONSTRAINTS: MediaStreamConstraints = { video: true, audio: true };
     private readonly socketEventsMapper: SocketEventType;
     private readonly peerConfiguration: RTCConfiguration;
-    private readonly localVideoEl?: HTMLVideoElement;
+    private readonly localVideoElement?: HTMLVideoElement;
     private readonly localVideoQuerySelector?: string;
-    private readonly remoteVideoEl?: HTMLVideoElement;
+    private readonly remoteVideoElements?: HTMLVideoElement[];
     private readonly remoteVideoQuerySelector?: string;
     private readonly offerCallBacks: Set<(offers: Offer[]) => void>;
     private readonly errorCallBacks: Set<(offers: Offer[]) => void>;
-    public didIOffer: boolean = false;
-    public userId: string = '';
+    private readonly remoteStreamsCallBacks: Set<(remoteStreams: MediaStream[]) => void>;
+    private didIOffer: boolean = false;
+    private readonly remoteVideoElementUserIdAttribute: string;
+    private readonly userId: string = '';
+    private callToUserIds: string[] = [];
+    private callToRoomId: string | undefined;
     private readonly debugMode: any;
 
     constructor(
         socket: Socket,
         elements: {
             userId: string;
-            localVideoEl?: HTMLVideoElement;
+            localVideoElement?: HTMLVideoElement;
             localVideoQuerySelector?: string;
-            remoteVideoEl?: HTMLVideoElement;
-            remoteVideoQuerySelector?: string;
+            remoteVideoElement?: HTMLVideoElement | HTMLVideoElement[];
+            remoteVideoElementUserIdAttribute?: string;
+            remoteVideoElementsQuerySelector?: string;
         },
         options: {
             debugMode?: boolean;
@@ -40,10 +42,11 @@ export class RTCPeerConnectionClient {
     ) {
         this.socket = socket;
         this.userId = elements.userId;
-        this.localVideoEl = elements.localVideoEl;
+        this.remoteVideoElementUserIdAttribute = elements.remoteVideoElementUserIdAttribute = 'data-user-id';
+        this.localVideoElement = elements.localVideoElement;
         this.localVideoQuerySelector = elements.localVideoQuerySelector;
-        this.remoteVideoEl = elements.remoteVideoEl;
-        this.remoteVideoQuerySelector = elements.remoteVideoQuerySelector;
+        this.remoteVideoElements = ([] as HTMLVideoElement[]).concat(elements.remoteVideoElement as HTMLVideoElement);
+        this.remoteVideoQuerySelector = elements.remoteVideoElementsQuerySelector;
 
         this.debugMode = options.debugMode;
         this.socketEventsMapper = options.socketEventsMapper || SOCKET_EVENTS;
@@ -51,6 +54,7 @@ export class RTCPeerConnectionClient {
 
         this.offerCallBacks = new Set();
         this.errorCallBacks = new Set();
+        this.remoteStreamsCallBacks = new Set();
 
         this.init();
     }
@@ -60,43 +64,58 @@ export class RTCPeerConnectionClient {
         console.debug(...args);
     }
 
-    public async call(constraints?: MediaStreamConstraints): Promise<[MediaStream, MediaStream]> {
-        try {
-            this.debug(
-                'request for user permission to access for constraints:',
-                constraints ?? this.DEFAULT_CONSTRAINTS
-            );
-            const localStream = await this.fetchUserMedia(constraints);
-
-            this.debug('Create RTC Peer Connection');
-            const remoteStream = await this.createPeerConnection();
-            this.debug('peerConnection is all set with our STUN servers sent over');
-            if (!this.peerConnection) {
-                throw new Error('Peer connection not found');
-            }
-
-            this.debug('call creating offer...');
-            const offer = await this.peerConnection.createOffer();
-            this.debug('call offer', offer);
-
-            this.debug('peerConnection.setLocalDescription', offer);
-            await this.peerConnection.setLocalDescription(offer);
-            this.didIOffer = true;
-
-            this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
-            this.socket.emit(this.socketEventsMapper.newOffer, offer);
-
-            return [localStream, remoteStream];
-        } catch (err: any) {
-            console.error(err);
-            throw err;
-        }
+    get isCaller() {
+        return this.didIOffer;
     }
 
-    public async answerOffer(
-        offerObj: Offer,
+    get isAnswerer() {
+        return !this.didIOffer;
+    }
+
+    public async call(
+        { userId, roomId }: { userId?: string | string[]; roomId?: string },
         constraints?: MediaStreamConstraints
-    ): Promise<[MediaStream, MediaStream]> {
+    ): Promise<MediaStream[]> {
+        this.callToUserIds = ([] as string[]).concat(userId as string).filter((v) => v);
+        this.callToRoomId = roomId;
+
+        return new Promise(async (resolve, reject) => {
+            try {
+                this.debug(
+                    'request for user permission to access for constraints:',
+                    constraints ?? this.DEFAULT_CONSTRAINTS
+                );
+                const localStream = await this.fetchUserMedia(constraints);
+
+                this.debug('Create RTC Peer Connection');
+                const remoteStreams = await this.createPeerConnection();
+                this.debug('peerConnection is all set with our STUN servers sent over');
+
+                if (!this.peerConnection) {
+                    reject(new Error('Peer connection not found'));
+                    return;
+                }
+
+                this.debug('call creating offer...');
+                const offer = await this.peerConnection.createOffer();
+                this.debug('offer', offer);
+
+                this.debug('peerConnection.setLocalDescription', offer);
+                await this.peerConnection.setLocalDescription(offer);
+                this.didIOffer = true;
+
+                this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
+                this.socket.emit(this.socketEventsMapper.newOffer, offer);
+
+                resolve([localStream, ...Object.values(remoteStreams)]);
+            } catch (err: any) {
+                console.error(err);
+                reject(err);
+            }
+        });
+    }
+
+    public async answerOffer(offerObj: Offer, constraints?: MediaStreamConstraints): Promise<MediaStream[]> {
         this.debug(
             'Answer offer! request for user permission to access for constraints:',
             constraints ?? this.DEFAULT_CONSTRAINTS
@@ -104,7 +123,7 @@ export class RTCPeerConnectionClient {
         const localStream = await this.fetchUserMedia(constraints);
 
         this.debug('Create RTC Peer Connection - for answer with offer to setRemoteDescription');
-        const removeStream = await this.createPeerConnection(offerObj);
+        const remoteStreams = await this.createPeerConnection(offerObj);
 
         if (!this.peerConnection) {
             throw new Error('Peer connection not found');
@@ -134,7 +153,7 @@ export class RTCPeerConnectionClient {
 
         this.debug('offerIceCandidates', offerIceCandidates);
 
-        return [localStream, removeStream];
+        return [localStream, ...Object.values(remoteStreams)];
     }
 
     private async addAnswer(offerObj: Offer) {
@@ -143,6 +162,16 @@ export class RTCPeerConnectionClient {
         this.debug('peerConnection.signalingState', this.peerConnection?.signalingState);
         await this.peerConnection?.setRemoteDescription(offerObj.answer as RTCSessionDescriptionInit);
         this.debug('peerConnection.signalingState', this.peerConnection?.signalingState);
+
+        for (const cb of [...this.remoteStreamsCallBacks].filter((cb) => typeof cb === 'function')) {
+            this.debug(
+                `socket.on(${this.socketEventsMapper.newOfferAwaiting}) fire onOffersReceived cb function`,
+                cb.name
+            );
+
+            this.remoteStreams[offerObj.answererUserName] ||= new MediaStream();
+            cb?.(Object.values(this.remoteStreams));
+        }
     }
 
     private async fetchUserMedia(constraints: MediaStreamConstraints = this.DEFAULT_CONSTRAINTS) {
@@ -152,8 +181,8 @@ export class RTCPeerConnectionClient {
 
             this.localStream = stream;
 
-            if (this.localVideoEl) {
-                this.localVideoEl.srcObject = stream;
+            if (this.localVideoElement) {
+                this.localVideoElement.srcObject = stream;
             } else if (this.localVideoQuerySelector) {
                 const localVideoEl: HTMLVideoElement | null = document.querySelector(this.localVideoQuerySelector);
                 if (localVideoEl) {
@@ -188,12 +217,23 @@ export class RTCPeerConnectionClient {
         const peerConnection = this.peerConnection as RTCPeerConnection;
         this.debug('peerConnection initialized:', peerConnection.signalingState);
 
-        this.remoteStream = new MediaStream();
-        if (this.remoteVideoEl) this.remoteVideoEl.srcObject = this.remoteStream;
-        else if (this.remoteVideoQuerySelector) {
-            const remoteVideoEl: HTMLVideoElement | null = document.querySelector(this.remoteVideoQuerySelector);
-            if (remoteVideoEl) {
-                remoteVideoEl.srcObject = this.remoteStream;
+        this.remoteStreams = {};
+
+        if (this.remoteVideoElements?.length) {
+            this.remoteVideoElements.forEach((remoteVideoElement: HTMLVideoElement, index) => {
+                const userId = remoteVideoElement.getAttribute(this.remoteVideoElementUserIdAttribute) ?? index;
+                this.remoteStreams[userId] = remoteVideoElement.srcObject = new MediaStream();
+            });
+        } else if (this.remoteVideoQuerySelector) {
+            const elements = document.querySelectorAll(this.remoteVideoQuerySelector);
+            const remoteVideoElements: HTMLVideoElement[] = [...elements] as HTMLVideoElement[];
+
+            if (remoteVideoElements.length) {
+                remoteVideoElements.forEach((remoteVideoElement: HTMLVideoElement, index) => {
+                    const userId = remoteVideoElement.getAttribute(this.remoteVideoElementUserIdAttribute) ?? index;
+                    this.remoteStreams[userId] ||= new MediaStream();
+                    remoteVideoElement.srcObject = this.remoteStreams[index];
+                });
             } else {
                 console.warn(
                     `NOTE: document.querySelector(${this.remoteVideoQuerySelector}) => null, video element not found!`
@@ -204,7 +244,7 @@ export class RTCPeerConnectionClient {
             }
         } else {
             this.debug(
-                `remoteVideoEl/remoteVideoQuerySelector element not set and not connecting to steam video tag element!`
+                `remoteVideoEl/remoteVideoQuerySelector elements not founds! not connecting to steam video tag element!`
             );
             console.warn(
                 `NOTE: The you dont provide any local stream elements, please make sure you connect the streams that returned form this function`
@@ -222,24 +262,29 @@ export class RTCPeerConnectionClient {
         });
 
         this.peerConnection.addEventListener('icecandidate', (event) => {
+            if (!event?.candidate) return;
+
             this.debug('........Ice candidate found!......');
-            if (event.candidate) {
-                this.debug(
-                    `socket.emit(${this.socketEventsMapper.sendIceCandidateToSignalingServer}) [peerConnection.signalingState=${peerConnection.signalingState}]`
-                );
-                this.socket.emit(this.socketEventsMapper.sendIceCandidateToSignalingServer, {
-                    iceCandidate: event.candidate,
-                    iceUserName: this.userId,
-                    didIOffer: this.didIOffer,
-                });
-            }
+            this.debug(
+                `socket.emit(${this.socketEventsMapper.sendIceCandidateToSignalingServer}) [peerConnection.signalingState=${peerConnection.signalingState}]`
+            );
+            this.socket.emit(this.socketEventsMapper.sendIceCandidateToSignalingServer, {
+                iceCandidate: event.candidate,
+                iceUserName: this.userId,
+                didIOffer: this.didIOffer,
+                callToUserIds: ([] as string[]).concat(this.userId, this.callToUserIds).filter((v) => v),
+                callToRoomId: this.callToRoomId,
+            });
         });
 
         this.peerConnection.addEventListener('track', (trackEvent) => {
             this.debug('Got a track from the other peer!', trackEvent);
-            trackEvent.streams[0].getTracks().forEach((track) => {
-                this.remoteStream?.addTrack(track);
-                this.debug('see something track data on remote stream video!!', track);
+            trackEvent.streams.forEach((stream: MediaStream & { userId?: string }, index: number) => {
+                stream.getTracks().forEach((track: MediaStreamTrack) => {
+                    this.remoteStreams[stream.userId ?? index] ||= new MediaStream();
+                    this.remoteStreams[stream.userId ?? index]?.addTrack(track);
+                    this.debug('see something track data on remote stream video!!', track);
+                });
             });
         });
 
@@ -253,7 +298,7 @@ export class RTCPeerConnectionClient {
         }
 
         this.debug('peerConnection is all set with our STUN servers sent over');
-        return this.remoteStream;
+        return this.remoteStreams;
     }
 
     private async addNewIceCandidate(iceCandidate: RTCIceCandidate) {
@@ -274,9 +319,17 @@ export class RTCPeerConnectionClient {
         this.offerCallBacks.add(cb);
         this.debug('onOffersReceived function callback added to handle answerer for caller:', cb.name);
     }
-
     public offOffersReceived(cb: (offers: Offer[]) => void) {
         this.offerCallBacks.delete(cb);
+        this.debug('onOffersReceived function callback removed:', cb.name);
+    }
+
+    public onRemoteStreams(cb: (remoteStreams: MediaStream[]) => void) {
+        this.remoteStreamsCallBacks.add(cb);
+        this.debug('onRemoteStreams function callback added to handle answerer for caller:', cb.name);
+    }
+    public offRemoteStreams(cb: (remoteStreams: MediaStream[]) => void) {
+        this.remoteStreamsCallBacks.delete(cb);
         this.debug('onOffersReceived function callback removed:', cb.name);
     }
 
@@ -301,14 +354,12 @@ export class RTCPeerConnectionClient {
         this.socket.on(this.socketEventsMapper.availableOffers, (offers: Offer[]) => {
             this.debug(`socket.on(${this.socketEventsMapper.availableOffers}) offers =`, offers);
             this.debug(`on connection get all available offers and waiting for user to make call to answerOffer`);
-            for (const cb of [...this.offerCallBacks]) {
-                if (typeof cb === 'function') {
-                    this.debug(
-                        `socket.on(${this.socketEventsMapper.availableOffers}) fire onOffersReceived cb function`,
-                        cb.name
-                    );
-                    cb?.(offers);
-                }
+            for (const cb of [...this.offerCallBacks].filter((cb) => typeof cb === 'function')) {
+                this.debug(
+                    `socket.on(${this.socketEventsMapper.availableOffers}) fire onOffersReceived cb function`,
+                    cb.name
+                );
+                cb?.(offers);
             }
         });
 
@@ -318,14 +369,12 @@ export class RTCPeerConnectionClient {
             this.debug(
                 `someone just made a new offer and we're already here, waiting for user to make call to answerOffer`
             );
-            for (const cb of [...this.offerCallBacks]) {
-                if (typeof cb === 'function') {
-                    this.debug(
-                        `socket.on(${this.socketEventsMapper.newOfferAwaiting}) fire onOffersReceived cb function`,
-                        cb.name
-                    );
-                    cb?.(offers);
-                }
+            for (const cb of [...this.offerCallBacks].filter((cb) => typeof cb === 'function')) {
+                this.debug(
+                    `socket.on(${this.socketEventsMapper.newOfferAwaiting}) fire onOffersReceived cb function`,
+                    cb.name
+                );
+                cb?.(offers);
             }
         });
     }

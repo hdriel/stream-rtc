@@ -6,16 +6,15 @@ lerna-debug.log*
 
 node_modules
 /demo/node_modules
+/demo/package-lock.json
+/demo/.yalc
+/demo/yalc.lock
 
 dist
+package-lock.json
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?

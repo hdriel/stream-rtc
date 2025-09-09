@@ -1,5 +1,5 @@
 import * as io from 'socket.io-client';
-import { RTCPeerConnectionClient, type Offer } from 'simple-rtc-peer-connection';
+import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 const userName = 'Rob-' + Math.floor(Math.random() * 100000);
 const password = 'x';
@@ -15,13 +15,13 @@ const url = `https://${host}:${port}/`;
 const socket = io.connect(url, { auth: { userName, password } });
 console.log('socket connecting on url:', url);
 
-const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
-console.log('localVideoEl', localVideoEl);
+const localVideoElement = document.querySelector('#local-video') as HTMLVideoElement;
+console.log('localVideoEl', localVideoElement);
 
-const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
-console.log('remoteVideoEl', remoteVideoEl);
+const remoteVideoElement = document.querySelector('#remote-video') as HTMLVideoElement;
+console.log('remoteVideoEl', remoteVideoElement);
 
-const pc = new RTCPeerConnectionClient(socket, { localVideoEl, remoteVideoEl, userId: userName });
+const pc = new RTCPeerConnectionClient(socket, { localVideoElement, remoteVideoElement, userId: userName });
 pc.onOffersReceived(createOffersCB);
 const errorCallBack = (err: any) => {
     alert(JSON.stringify(err, null, 4));

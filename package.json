@@ -7,7 +7,8 @@
         "build": "tsc && vite build",
         "preview": "vite preview",
         "clean": "rimraf ./dist",
-        "yalc:publish": "pnpm run build && yalc publish --private --push"
+        "yalc:publish": "yalc publish --private --push",
+        "yalc:build-publish": "npm run build && npm run yalc:publish"
     },
     "files": [
         "dist"
@@ -30,7 +31,8 @@
         "ts-node": "^10.9.2",
         "typescript": "^5.9.2",
         "vite": "^7.1.2",
-        "vite-plugin-dts": "^4.5.4"
+        "vite-plugin-dts": "^4.5.4",
+        "yalc": "^1.0.0-pre.53"
     },
     "keywords": [
         "stream",
