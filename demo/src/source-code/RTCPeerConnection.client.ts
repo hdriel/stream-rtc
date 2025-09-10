@@ -255,7 +255,8 @@ export class RTCPeerConnectionClient {
     private async createPeerConnection(userId?: string | string[], offerObj?: Offer) {
         this.debug('peerConnection fetch us ICE candidates with peerConfiguration:', this.peerConfiguration);
         // is a caller so we stay with one caller peer connections for all
-        if (Object.values(RTCPeerConnectionClient.peerConnections).every((v) => v.peerConnection) && !offerObj) {
+        const peers = Object.values(RTCPeerConnectionClient.peerConnections);
+        if (peers.length && peers.every((v) => v.peerConnection) && !offerObj) {
             return [];
         }
 

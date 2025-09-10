@@ -9,7 +9,7 @@
         "ca": "mkcert create-ca",
         "cert": "mkcert create-cert",
         "dev": "vite",
-        "build": "tsc && vite build",
+        "build": "tsc && vite build --mode=development",
         "preview": "vite preview",
         "yalc:build-publish-attach": "cd .. && npm run yalc:build-publish",
         "yalc:attach": "yalc add stream-rtc",
@@ -17,6 +17,7 @@
     },
     "devDependencies": {
         "@types/express": "^5.0.3",
+        "@vitejs/plugin-react": "^5.0.2",
         "express": "5.0.0",
         "mkcert": "^1.5.1",
         "nodemon": "^3.1.10",

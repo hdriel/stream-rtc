@@ -131,5 +131,15 @@ export class RTCPeerConnectionServer {
                 }
             }
         );
+
+        this.socket.on('disconnect', () => {
+            const index = RTCPeerConnectionServer.offers.findIndex(
+                (offer: Offer) => offer.offererUserId === this.userId
+            );
+
+            if (index >= 0) {
+                RTCPeerConnectionServer.offers.splice(index, 1);
+            }
+        });
     }
 }
