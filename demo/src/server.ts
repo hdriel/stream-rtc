@@ -28,14 +28,19 @@ expressServer.listen(8181); // https://localhost:8181
 console.log('Listening on port 8181');
 console.log('open url: https://localhost:8181');
 
+const userIds: Record<string, string> = {};
+
 io.on('connection', (socket) => {
     // console.log("Someone has connected");
+    socket.handshake.auth.userId = userIds[socket.id] = 'Rob-' + Math.floor(Math.random() * 100000);
     const password = socket.handshake.auth.password;
+    socket.emit('connected', socket.handshake.auth.userId);
+    socket.broadcast.emit('user-connected', socket.handshake.auth.userId);
 
     if (password !== 'x') {
         socket.disconnect(true);
         return;
     }
 
-    new RTCPeerConnectionServer(socket, socket.handshake.auth.userName);
+    new RTCPeerConnectionServer(socket, socket.handshake.auth.userId);
 });

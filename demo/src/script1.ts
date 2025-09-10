@@ -1,11 +1,16 @@
 import * as io from 'socket.io-client';
-import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
+import { RTCPeerConnectionClient, type Offer } from './source-code';
+// import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
-const userName = 'Rob-' + Math.floor(Math.random() * 100000);
+let userName = 'Rob-' + Math.floor(Math.random() * 100000);
+let toUserId = '';
 const password = 'x';
 
-const userNameEl = document.querySelector('#user-name') as Element;
-userNameEl.innerHTML = userName;
+function updateUserName() {
+    const userNameEl = document.querySelector('#user-name') as Element;
+    userNameEl.innerHTML = userName;
+}
+updateUserName();
 
 // @ts-ignore
 const host = import.meta.env.VITE_SERVER_HOST;
@@ -13,6 +18,17 @@ const host = import.meta.env.VITE_SERVER_HOST;
 const port = import.meta.env.VITE_SERVER_PORT;
 const url = `https://${host}:${port}/`;
 const socket = io.connect(url, { auth: { userName, password } });
+socket.on('connected', (userId) => {
+    console.log('Connected to RTC', userName, userId);
+    userName = userId;
+    updateUserName();
+});
+
+socket.on('user-connected', (userId) => {
+    console.log('other user connected to RTC', userId);
+    toUserId = userId;
+});
+
 console.log('socket connecting on url:', url);
 
 const localVideoElement = document.querySelector('#local-video') as HTMLVideoElement;
@@ -33,7 +49,9 @@ const pc = new RTCPeerConnectionClient(
 pc.onOffersReceived(createOffersCB);
 pc.onError(errorCallBack);
 
-document.querySelector('#call')?.addEventListener('click', async () => pc.call());
+document.querySelector('#call')?.addEventListener('click', async () => {
+    pc.call({ userId: toUserId });
+});
 
 function createOffersCB(offers: Offer[]) {
     //make green answer button for this new offer
