@@ -35,12 +35,23 @@ io.on('connection', (socket) => {
     socket.handshake.auth.userId = userIds[socket.id] = 'Rob-' + Math.floor(Math.random() * 100000);
     const password = socket.handshake.auth.password;
     socket.emit('connected', socket.handshake.auth.userId);
+
     socket.broadcast.emit('user-connected', socket.handshake.auth.userId);
+    Object.values(userIds)
+        .filter((userId) => userId !== socket.handshake.auth.userId)
+        .forEach((userId) => {
+            socket.emit('user-connected', userId);
+        });
 
     if (password !== 'x') {
         socket.disconnect(true);
         return;
     }
+
+    socket.on('disconnect', () => {
+        socket.broadcast.emit('user-disconnect', userIds[socket.id]);
+        delete userIds[socket.id];
+    });
 
     new RTCPeerConnectionServer(socket, socket.handshake.auth.userId);
 });

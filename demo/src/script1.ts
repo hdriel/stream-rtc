@@ -19,14 +19,18 @@ const port = import.meta.env.VITE_SERVER_PORT;
 const url = `https://${host}:${port}/`;
 const socket = io.connect(url, { auth: { userName, password } });
 socket.on('connected', (userId) => {
-    console.log('Connected to RTC', userName, userId);
+    console.log('Connected to RTC app', userName, userId);
     userName = userId;
     updateUserName();
 });
 
 socket.on('user-connected', (userId) => {
-    console.log('other user connected to RTC', userId);
+    console.log('other user connected to RTC app', userId);
     toUserId = userId;
+});
+
+socket.on('user-disconnect', (userId) => {
+    console.log('other user disconnected from RTC app', userId);
 });
 
 console.log('socket connecting on url:', url);
