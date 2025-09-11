@@ -27,7 +27,7 @@ export class RTCPeerConnectionClient {
     private didIOffer: boolean = false;
     private userId: string = '';
     private callToUserIds: string[] = [];
-    private callToRoomId: string | undefined;
+    private _callToRoomId: string | undefined;
     private readonly debugMode: any;
 
     constructor(
@@ -82,6 +82,14 @@ export class RTCPeerConnectionClient {
         return !this.didIOffer;
     }
 
+    public async callToUserId(userId: string, constraints?: MediaStreamConstraints): Promise<MediaStream[]> {
+        return this.call({ userId }, constraints);
+    }
+
+    public async callToRoomId(roomId: string, constraints?: MediaStreamConstraints): Promise<MediaStream[]> {
+        return this.call({ roomId }, constraints);
+    }
+
     public async call(
         {
             userId,
@@ -93,7 +101,7 @@ export class RTCPeerConnectionClient {
         constraints?: MediaStreamConstraints
     ): Promise<MediaStream[]> {
         this.callToUserIds = ([] as string[]).concat(userId as string).filter((v) => v);
-        this.callToRoomId = roomId;
+        this._callToRoomId = roomId;
 
         return new Promise(async (resolve) => {
             try {
@@ -130,7 +138,7 @@ export class RTCPeerConnectionClient {
 
                         this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
                         this.socket.emit(this.socketEventsMapper.newOffer, offer, {
-                            roomId: this.callToRoomId,
+                            roomId: this._callToRoomId,
                             userIds: this.callToUserIds,
                             userId,
                         });
@@ -326,7 +334,7 @@ export class RTCPeerConnectionClient {
                     iceUserId: this.userId,
                     didIOffer: this.didIOffer,
                     callToUserIds: ([] as string[]).concat(this.userId, this.callToUserIds).filter((v) => v),
-                    callToRoomId: this.callToRoomId,
+                    _callToRoomId: this._callToRoomId,
                 } as IceCandidateOffer);
             });
 
