@@ -1,11 +1,16 @@
 import * as io from 'socket.io-client';
-import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
+import { RTCPeerConnectionClient, type Offer } from './source-code';
+// import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
-const userName = 'Rob-' + Math.floor(Math.random() * 100000);
+let userName = 'Rob-' + Math.floor(Math.random() * 100000);
+let toUserId = '';
 const password = 'x';
 
-const userNameEl = document.querySelector('#user-name') as Element;
-userNameEl.innerHTML = userName;
+function updateUserName() {
+    const userNameEl = document.querySelector('#user-name') as Element;
+    userNameEl.innerHTML = userName;
+}
+updateUserName();
 
 // @ts-ignore
 const host = import.meta.env.VITE_SERVER_HOST;
@@ -13,26 +18,46 @@ const host = import.meta.env.VITE_SERVER_HOST;
 const port = import.meta.env.VITE_SERVER_PORT;
 const url = `https://${host}:${port}/`;
 const socket = io.connect(url, { auth: { userName, password } });
+socket.on('connected', (userId) => {
+    console.log('Connected to RTC app', userName, userId);
+    userName = userId;
+    pc.updateUserId(userId);
+    updateUserName();
+});
+
+socket.on('user-connected', (userId) => {
+    console.log('other user connected to RTC app', userId);
+    toUserId = userId;
+});
+
+socket.on('user-disconnect', (userId) => {
+    console.log('other user disconnected from RTC app', userId);
+});
+
 console.log('socket connecting on url:', url);
 
-const localVideoEl = document.querySelector('#local-video') as HTMLVideoElement;
-console.log('localVideoEl', localVideoEl);
+const localVideoElement = document.querySelector('#local-video') as HTMLVideoElement;
+console.log('localVideoEl', localVideoElement);
 
-const remoteVideoEl = document.querySelector('#remote-video') as HTMLVideoElement;
-console.log('remoteVideoEl', remoteVideoEl);
+const remoteVideoElement = document.querySelector('#remote-video') as HTMLVideoElement;
+console.log('remoteVideoEl', remoteVideoElement);
 
 function errorCallBack(err: any) {
     alert(JSON.stringify(err, null, 4));
 }
 
-const pc = new RTCPeerConnectionClient(socket, { userId: userName }, { debugMode: true });
+const pc = new RTCPeerConnectionClient(
+    socket,
+    { localVideoElement, remoteVideoElement, userId: userName },
+    { debugMode: true }
+);
 pc.onOffersReceived(createOffersCB);
 pc.onError(errorCallBack);
 
 document.querySelector('#call')?.addEventListener('click', async () => {
-    const [localStream, remoteStream] = await pc.call();
-    localVideoEl.srcObject = localStream;
-    remoteVideoEl.srcObject = remoteStream;
+    const [localStream, remoteStream] = await pc.call({ userId: toUserId });
+    localVideoElement.srcObject = localStream;
+    remoteVideoElement.srcObject = remoteStream;
 });
 
 function createOffersCB(offers: Offer[]) {
@@ -44,8 +69,8 @@ function createOffersCB(offers: Offer[]) {
         newOfferEl.innerHTML = `<button class="btn btn-success col-1">Answer ${o.offererUserId}</button>`;
         newOfferEl.addEventListener('click', async () => {
             const [localStream, remoteStream] = await pc.answerOffer(o);
-            localVideoEl.srcObject = localStream;
-            remoteVideoEl.srcObject = remoteStream;
+            localVideoElement.srcObject = localStream;
+            remoteVideoElement.srcObject = remoteStream;
         });
         answerEl?.appendChild(newOfferEl);
     });
