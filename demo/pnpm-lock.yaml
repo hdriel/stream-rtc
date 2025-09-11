@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      stream-rtc:
-        specifier: file:.yalc/stream-rtc
-        version: file:.yalc/stream-rtc
     devDependencies:
       '@types/express':
         specifier: ^5.0.3
@@ -1084,9 +1080,6 @@ packages:
   statuses@2.0.1:
     resolution: {integrity: sha512-RwNA9Z/7PrK06rYLIzFMlaF+l73iwpzsqRIFgbMLbTcLD6cOao82TaWefPXQvB2fOC4AjuYSEndS7N/mTCbkdQ==}
     engines: {node: '>= 0.8'}
-
-  stream-rtc@file:.yalc/stream-rtc:
-    resolution: {directory: .yalc/stream-rtc, type: directory}
 
   supports-color@5.5.0:
     resolution: {integrity: sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==}
@@ -2276,8 +2269,6 @@ snapshots:
   source-map-js@1.2.1: {}
 
   statuses@2.0.1: {}
-
-  stream-rtc@file:.yalc/stream-rtc: {}
 
   supports-color@5.5.0:
     dependencies:

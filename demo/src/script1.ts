@@ -46,6 +46,9 @@ function errorCallBack(err: any) {
     alert(JSON.stringify(err, null, 4));
 }
 
+// @ts-ignore
+window.RTCPeerConnectionClient = RTCPeerConnectionClient;
+
 const pc = new RTCPeerConnectionClient(
     socket,
     { localVideoElement, remoteVideoElement, userId: userName },
@@ -55,7 +58,7 @@ pc.onOffersReceived(createOffersCB);
 pc.onError(errorCallBack);
 
 document.querySelector('#call')?.addEventListener('click', async () => {
-    return pc.callToUserId(toUserId);
+    return pc.callToUserId(toUserId, { video: false, audio: true });
 });
 
 function createOffersCB(offers: Offer[]) {
@@ -65,7 +68,7 @@ function createOffersCB(offers: Offer[]) {
         console.log(o);
         const newOfferEl = document.createElement('div');
         newOfferEl.innerHTML = `<button class="btn btn-success col-1">Answer ${o.offererUserId}</button>`;
-        newOfferEl.addEventListener('click', () => pc.answerOffer(o));
+        newOfferEl.addEventListener('click', () => pc.answerOffer(o, { video: false, audio: true }));
         answerEl?.appendChild(newOfferEl);
     });
 }

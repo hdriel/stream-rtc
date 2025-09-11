@@ -30,7 +30,5 @@
         "typescript": "^5.9.2",
         "vite": "^7.1.2"
     },
-    "dependencies": {
-        "stream-rtc": "file:.yalc/stream-rtc"
-    }
+    "dependencies": {}
 }
