@@ -28,8 +28,8 @@ const pc = new RTCPeerConnectionClient(
 );
 
 pc.onError((err: any) => alert(JSON.stringify(err, null, 4)));
-pc.onOffersReceived((offers: Offer[]) => {
-    offers.forEach((o) => {
+pc.onOffersReceived((offers: Offer | Offer[]) => {
+    ([] as Offer[]).concat(offers).forEach((o) => {
         addAnswerElement(o, () => pc.answerOffer(o, defaultDeviceChat));
     });
 });

@@ -394,11 +394,11 @@ export class RTCPeerConnectionClient {
         this.debug('onError function callback removed:', cb.name);
     }
 
-    public onOffersReceived(cb: (offers: Offer[]) => void) {
+    public onOffersReceived(cb: (offers: Offer | Offer[]) => void) {
         this.offerCallBacks.add(cb);
         this.debug('onOffersReceived function callback added to handle answerer for caller:', cb.name);
     }
-    public offOffersReceived(cb: (offers: Offer[]) => void) {
+    public offOffersReceived(cb: (offers: Offer | Offer[]) => void) {
         this.offerCallBacks.delete(cb);
         this.debug('onOffersReceived function callback removed:', cb.name);
     }

@@ -35,23 +35,40 @@ export class RTCPeerConnectionServer {
     }
 
     private init() {
-        this.socket.on(this.socketEventsMapper.newOffer, (newOffer: RTCSessionDescriptionInit) => {
-            RTCPeerConnectionServer.offers.push({
-                offererUserId: this.userId,
-                offer: newOffer,
-                offerIceCandidates: [],
-                answererUserId: '',
-                answer: null,
-                answererIceCandidates: [],
-            });
-            // console.log(newOffer.sdp.slice(50))
-            //send out to all connected sockets EXCEPT the caller
-            // todo: check to emit for specific sockets/room
-            this.socket.broadcast.emit(
-                this.socketEventsMapper.newOfferAwaiting,
-                RTCPeerConnectionServer.offers.slice(-1)
-            );
-        });
+        this.socket.on(
+            this.socketEventsMapper.newOffer,
+            (
+                newOffer: RTCSessionDescriptionInit,
+                { roomId, userIds }: { roomId?: string; userIds?: string[] } = {}
+            ) => {
+                const offer: Offer = {
+                    offererUserId: this.userId,
+                    offer: newOffer,
+                    offerIceCandidates: [],
+                    answererUserId: '',
+                    answer: null,
+                    answererIceCandidates: [],
+                };
+                RTCPeerConnectionServer.offers.push(offer);
+
+                if (roomId) {
+                    // send out to all connected sockets in roomId EXCEPT the caller
+                    this.socket.broadcast.to(roomId).emit(this.socketEventsMapper.newOfferAwaiting, offer);
+                } else if (userIds?.length) {
+                    // send out to all userIds params sockets EXCEPT the caller
+                    userIds
+                        .map((userId) => RTCPeerConnectionServer.connectedSockets[userId])
+                        .forEach((userSocketId) => {
+                            this.socket.broadcast
+                                .to(userSocketId)
+                                .emit(this.socketEventsMapper.newOfferAwaiting, offer);
+                        });
+                } else {
+                    // send out to all connected sockets EXCEPT the caller
+                    this.socket.broadcast.emit(this.socketEventsMapper.newOfferAwaiting, offer);
+                }
+            }
+        );
 
         this.socket.on(
             this.socketEventsMapper.newAnswer,
@@ -73,6 +90,7 @@ export class RTCPeerConnectionServer {
                     console.log('No OfferToUpdate');
                     return;
                 }
+
                 //send back to the answerer all the iceCandidates we have already collected
                 ackFunction(offerToUpdate.offerIceCandidates);
                 offerToUpdate.answer = offerObj.answer;
@@ -80,8 +98,8 @@ export class RTCPeerConnectionServer {
                 //socket has a .to() which allows emiting to a "room"
                 //every socket has it's own room
                 this.socket.to(socketIdToAnswer).emit(this.socketEventsMapper.answerResponse, offerToUpdate);
+
                 const answererOffer: Offer = {
-                    ...offerObj,
                     offererUserId: offerObj.answererUserId,
                     offer: offerObj.answer as RTCSessionDescriptionInit,
                     offerIceCandidates: offerObj.answererIceCandidates,

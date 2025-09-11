@@ -7,6 +7,9 @@ import('./script5.ts');
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="container">     
       <h1 id="use-case">case</h1>
+      <button id="join-room" class="btn btn-primary col-1" hidden>Join</button>
+      
+      
       <div class="row mb-3 mt-3 justify-content-md-center">
         <div id="user-name"></div>
         <button id="call" class="btn btn-primary col-1">Call!</button>

@@ -23,8 +23,8 @@ const pc = new RTCPeerConnectionClient(socket, { userId: getUserName() }, { debu
 
 pc.onError((err: any) => alert(JSON.stringify(err, null, 4)));
 pc.onRemoteStreamAdded(addRemoteVideoElement); // add dynamically remote videos
-pc.onOffersReceived((offers: Offer[]) => {
-    offers.forEach((o) => {
+pc.onOffersReceived((offers: Offer | Offer[]) => {
+    ([] as Offer[]).concat(offers).forEach((o) => {
         addAnswerElement(o, async () => {
             const [localStream] = await pc.answerOffer(o, defaultDeviceChat);
             localVideoElement.srcObject = localStream;

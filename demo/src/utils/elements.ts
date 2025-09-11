@@ -13,6 +13,8 @@ const answerEl = document.querySelector('#answer');
 
 const title = document.querySelector('#use-case') as Element;
 
+export const joinRoomElement = document.querySelector('#join-room') as Element;
+
 export function scenario(text: string) {
     title.innerHTML = text;
 }

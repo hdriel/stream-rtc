@@ -6,7 +6,7 @@ import { Server as SocketIO } from 'socket.io';
 import { RTCPeerConnectionServer } from './source-code';
 // import { RTCPeerConnectionServer } from 'stream-rtc';
 
-const roomId = 'the_kings';
+let _roomId = 'some-room-id';
 const __dirname = import.meta.dirname;
 console.log('__dirname', __dirname);
 const app = express();
@@ -41,7 +41,6 @@ io.on('connection', (socket) => {
         return;
     }
 
-    socket.join(roomId);
     socket.emit('connected', socket.handshake.auth.userId);
 
     socket.broadcast.emit('user-connected', socket.handshake.auth.userId);
@@ -57,5 +56,10 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         socket.broadcast.emit('user-disconnect', userIds[socket.id]);
         delete userIds[socket.id];
+    });
+
+    socket.on('join-room', (roomId) => {
+        _roomId = _roomId;
+        socket.join(roomId);
     });
 });
