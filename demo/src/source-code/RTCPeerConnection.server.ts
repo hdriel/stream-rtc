@@ -56,7 +56,6 @@ export class RTCPeerConnectionServer {
         this.socket.on(
             this.socketEventsMapper.newAnswer,
             (offerObj: Offer, ackFunction: (iceCandidates: RTCIceCandidate[]) => void) => {
-                console.log(offerObj);
                 //emit this answer (offerObj) back to CLIENT1
                 //in order to do that, we need CLIENT1's socketid
                 const socketIdToAnswer = RTCPeerConnectionServer.connectedSockets[offerObj.offererUserId];
@@ -133,6 +132,7 @@ export class RTCPeerConnectionServer {
         );
 
         this.socket.on('disconnect', () => {
+            this.removeSocketId(this.userId);
             const index = RTCPeerConnectionServer.offers.findIndex(
                 (offer: Offer) => offer.offererUserId === this.userId
             );

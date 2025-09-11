@@ -6,7 +6,7 @@ export class RTCPeerConnectionServer {
     private socket: SocketIO;
     private static readonly offers: Offer[] = [];
     private static connectedSockets: Record<string, string> = {};
-    private readonly userId: string = '';
+    private userId: string = '';
     private readonly socketEventsMapper: SocketEventType;
 
     constructor(

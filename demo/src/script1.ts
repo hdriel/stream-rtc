@@ -21,6 +21,7 @@ const socket = io.connect(url, { auth: { userName, password } });
 socket.on('connected', (userId) => {
     console.log('Connected to RTC app', userName, userId);
     userName = userId;
+    pc.updateUserId(userId);
     updateUserName();
 });
 

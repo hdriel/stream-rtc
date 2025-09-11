@@ -49,10 +49,11 @@ io.on('connection', (socket) => {
         return;
     }
 
+    const rtcserver = new RTCPeerConnectionServer(socket, socket.handshake.auth.userId);
+    rtcserver.updateSocketId(socket.handshake.auth.userId);
+
     socket.on('disconnect', () => {
         socket.broadcast.emit('user-disconnect', userIds[socket.id]);
         delete userIds[socket.id];
     });
-
-    new RTCPeerConnectionServer(socket, socket.handshake.auth.userId);
 });
