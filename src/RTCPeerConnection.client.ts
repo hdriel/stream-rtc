@@ -25,7 +25,7 @@ export class RTCPeerConnectionClient {
     private readonly errorCallBacks: Set<(error: Error) => void>;
     private readonly remoteStreamAddedCallBacks: Set<(remoteStream: MediaStream) => void>;
     private didIOffer: boolean = false;
-    private readonly userId: string = '';
+    private userId: string = '';
     private callToUserIds: string[] = [];
     private callToRoomId: string | undefined;
     private readonly debugMode: any;
@@ -68,6 +68,10 @@ export class RTCPeerConnectionClient {
     public debug(...args: any[]) {
         if (!this.debugMode) return;
         console.debug(...args);
+    }
+
+    updateUserId(userId: string): void {
+        this.userId = userId;
     }
 
     get isCaller() {
@@ -195,10 +199,10 @@ export class RTCPeerConnectionClient {
     }
 
     private async addAnswer(offerObj: Offer) {
-        const peerConnection = RTCPeerConnectionClient.peerConnections[offerObj.offererUserId].peerConnection;
+        const userId = offerObj.answererUserId;
+        const peerConnection = RTCPeerConnectionClient.peerConnections[userId].peerConnection;
         if (!peerConnection) return;
-        const remoteStream = RTCPeerConnectionClient.peerConnections[offerObj.offererUserId]
-            .remoteStream as MediaStream;
+        const remoteStream = RTCPeerConnectionClient.peerConnections[userId].remoteStream as MediaStream;
 
         this.debug('addAnswer is called and at this point, the offer and answer have been exchanged');
         this.debug('now CLIENT1/Caller here needs to set the remote local string');
@@ -255,7 +259,8 @@ export class RTCPeerConnectionClient {
     private async createPeerConnection(userId?: string | string[], offerObj?: Offer) {
         this.debug('peerConnection fetch us ICE candidates with peerConfiguration:', this.peerConfiguration);
         // is a caller so we stay with one caller peer connections for all
-        if (Object.values(RTCPeerConnectionClient.peerConnections).every((v) => v.peerConnection) && !offerObj) {
+        const peers = Object.values(RTCPeerConnectionClient.peerConnections);
+        if (peers.length && peers.every((v) => v.peerConnection) && !offerObj) {
             return [];
         }
 
