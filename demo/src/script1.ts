@@ -55,7 +55,7 @@ pc.onOffersReceived(createOffersCB);
 pc.onError(errorCallBack);
 
 document.querySelector('#call')?.addEventListener('click', async () => {
-    pc.call({ userId: toUserId });
+    return pc.callToUserId(toUserId);
 });
 
 function createOffersCB(offers: Offer[]) {
