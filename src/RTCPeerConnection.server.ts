@@ -80,6 +80,16 @@ export class RTCPeerConnectionServer {
                 //socket has a .to() which allows emiting to a "room"
                 //every socket has it's own room
                 this.socket.to(socketIdToAnswer).emit(this.socketEventsMapper.answerResponse, offerToUpdate);
+                const answererOffer: Offer = {
+                    ...offerObj,
+                    offererUserId: offerObj.answererUserId,
+                    offer: offerObj.answer as RTCSessionDescriptionInit,
+                    offerIceCandidates: offerObj.answererIceCandidates,
+                    answererUserId: offerObj.offererUserId,
+                    answer: offerObj.offer,
+                    answererIceCandidates: offerObj.offerIceCandidates,
+                };
+                this.socket.emit(this.socketEventsMapper.answerResponse, answererOffer);
             }
         );
 
