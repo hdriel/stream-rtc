@@ -180,10 +180,13 @@ export class RTCPeerConnectionClient {
                 const answer = await peerConnection.createAnswer({}); // empty object param just to make the docs happy
                 this.debug('this is CLIENT2, and CLIENT2 uses the answer as the setLocalDescription');
                 this.debug(
-                    `peerConnection.signalingState = ${peerConnection.signalingState}, if it's equal to 'have-local-pranswer' it's because CLIENT2 has set its setLocalDescription to it's answer`
+                    `answerOffer before setLocalDescription peerConnection.signalingState = ${peerConnection.signalingState}, if it's equal to 'have-local-pranswer' it's because CLIENT2 has set its setLocalDescription to it's answer`
                 );
                 await peerConnection.setLocalDescription(answer);
-                this.debug('peerConnection.signalingState', peerConnection.signalingState);
+                this.debug(
+                    'answerOffer after setLocalDescription peerConnection.signalingState',
+                    peerConnection.signalingState
+                );
 
                 this.debug('add the answer to the offerObj so the server knows which offer this is related to');
                 offerObj.answer = answer;
@@ -214,9 +217,12 @@ export class RTCPeerConnectionClient {
 
         this.debug('addAnswer is called and at this point, the offer and answer have been exchanged');
         this.debug('now CLIENT1/Caller here needs to set the remote local string');
-        this.debug('peerConnection.signalingState', peerConnection.signalingState);
+        this.debug(
+            'addAnswer before setRemoteDescription peerConnection.signalingState',
+            peerConnection.signalingState
+        );
         await peerConnection.setRemoteDescription(offerObj.answer as RTCSessionDescriptionInit);
-        this.debug('peerConnection.signalingState', peerConnection.signalingState);
+        this.debug('addAnswer after setRemoteDescription peerConnection.signalingState', peerConnection.signalingState);
 
         for (const cb of [...this.remoteStreamAddedCallBacks].filter((cb) => typeof cb === 'function')) {
             this.debug(
@@ -319,7 +325,7 @@ export class RTCPeerConnectionClient {
             });
 
             peerConnection.addEventListener('signalingstatechange', () => {
-                this.debug('peerConnection.signalingState:', peerConnection.signalingState);
+                this.debug('signalingstatechange peerConnection.signalingState', peerConnection.signalingState);
             });
 
             peerConnection.addEventListener('icecandidate', (event) => {
@@ -352,7 +358,7 @@ export class RTCPeerConnectionClient {
                 this.debug('peerConnection.setRemoteDescription - will be set when we call from answerOffer');
                 await peerConnection.setRemoteDescription(offerObj.offer as RTCSessionDescriptionInit);
                 if (peerConnection.signalingState !== 'stable') {
-                    this.debug('peerConnection.signalingState', peerConnection.signalingState);
+                    this.debug('unstable peerConnection.signalingState', peerConnection.signalingState);
                     this.debug('should be have-remote-offer, because client2 has setRemoteDesc on the offer');
                 }
             }
