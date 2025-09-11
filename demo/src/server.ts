@@ -6,6 +6,7 @@ import { Server as SocketIO } from 'socket.io';
 import { RTCPeerConnectionServer } from './source-code';
 // import { RTCPeerConnectionServer } from 'stream-rtc';
 
+const roomId = 'the_kings';
 const __dirname = import.meta.dirname;
 console.log('__dirname', __dirname);
 const app = express();
@@ -35,6 +36,12 @@ io.on('connection', (socket) => {
     // console.log("Someone has connected");
     socket.handshake.auth.userId = userIds[socket.id] = 'Rob-' + Math.floor(Math.random() * 100000);
     const password = socket.handshake.auth.password;
+    if (password !== 'x') {
+        socket.disconnect(true);
+        return;
+    }
+
+    socket.join(roomId);
     socket.emit('connected', socket.handshake.auth.userId);
 
     socket.broadcast.emit('user-connected', socket.handshake.auth.userId);
@@ -43,11 +50,6 @@ io.on('connection', (socket) => {
         .forEach((userId) => {
             socket.emit('user-connected', userId);
         });
-
-    if (password !== 'x') {
-        socket.disconnect(true);
-        return;
-    }
 
     const rtcserver = new RTCPeerConnectionServer(socket, socket.handshake.auth.userId);
     rtcserver.updateSocketId(socket.handshake.auth.userId);
