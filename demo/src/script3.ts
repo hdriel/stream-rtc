@@ -8,6 +8,7 @@ import {
     scenario,
 } from './utils/elements.ts';
 import { connectSocketIO } from './utils/socket-io.ts';
+import { defaultDeviceChat } from './utils/device-media.ts';
 // import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 // @ts-ignore
@@ -22,7 +23,7 @@ pc.onError((err: any) => alert(JSON.stringify(err, null, 4)));
 pc.onOffersReceived((offers: Offer[]) => {
     offers.forEach((o) => {
         addAnswerElement(o, async () => {
-            const [localStream, remoteStream] = await pc.answerOffer(o);
+            const [localStream, remoteStream] = await pc.answerOffer(o, defaultDeviceChat);
             localVideoElement.srcObject = localStream;
             remoteVideoElement.srcObject = remoteStream;
         });
@@ -31,7 +32,7 @@ pc.onOffersReceived((offers: Offer[]) => {
 
 callButtonElement?.addEventListener('click', async () => {
     const toUserId = getToUserId();
-    const [localStream, remoteStream] = await pc.call({ userId: toUserId });
+    const [localStream, remoteStream] = await pc.call({ userId: toUserId }, defaultDeviceChat);
     localVideoElement.srcObject = localStream;
     remoteVideoElement.srcObject = remoteStream;
 });

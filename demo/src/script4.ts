@@ -9,6 +9,7 @@ import {
     addRemoteVideoElement,
 } from './utils/elements.ts';
 import { connectSocketIO } from './utils/socket-io.ts';
+import { defaultDeviceChat } from './utils/device-media.ts';
 // import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 // @ts-ignore
@@ -25,7 +26,7 @@ pc.onRemoteStreamAdded(addRemoteVideoElement); // add dynamically remote videos
 pc.onOffersReceived((offers: Offer[]) => {
     offers.forEach((o) => {
         addAnswerElement(o, async () => {
-            const [localStream] = await pc.answerOffer(o);
+            const [localStream] = await pc.answerOffer(o, defaultDeviceChat);
             localVideoElement.srcObject = localStream;
         });
     });
@@ -33,6 +34,6 @@ pc.onOffersReceived((offers: Offer[]) => {
 
 callButtonElement?.addEventListener('click', async () => {
     const toUserId = getToUserId();
-    const [localStream] = await pc.call({ userId: toUserId });
+    const [localStream] = await pc.call({ userId: toUserId }, defaultDeviceChat);
     localVideoElement.srcObject = localStream;
 });
