@@ -1,8 +1,8 @@
-// import('./script1.ts');
-// import('./script2.ts');
-// import('./script3.ts');
-// import('./script4.ts');
-import('./script5.ts');
+import('./script1');
+// import('./script2');
+// import('./script3');
+// import('./script4');
+// import('./script5');
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="container">     
@@ -14,7 +14,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <div id="user-name"></div>
         <button id="call" class="btn btn-primary col-1">Call!</button>
         <button id="hangup" class="col-1" class="btn btn-primary">Hangup</button>
-        <div id="answer" class="col"></div>
+        <div id="answer" class="col-10"></div>
       </div>
       <div id="videos">
         <div id="video-wrapper">

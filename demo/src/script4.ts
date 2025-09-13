@@ -34,6 +34,6 @@ pc.onOffersReceived((offers: Offer | Offer[]) => {
 
 callButtonElement?.addEventListener('click', async () => {
     const toUserId = getToUserId();
-    const [localStream] = await pc.call({ userId: toUserId }, defaultDeviceChat);
+    const [localStream] = await pc.callToUserId(toUserId, defaultDeviceChat);
     localVideoElement.srcObject = localStream;
 });

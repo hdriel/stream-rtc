@@ -8,6 +8,7 @@ export const remoteVideoElement = document.querySelector(remoteVideoQuerySelecto
 
 const videosElement = document.querySelector('#videos') as HTMLVideoElement;
 export const callButtonElement = document.querySelector('#call') as HTMLVideoElement;
+export const hangupButtonElement = document.querySelector('#hangup') as HTMLVideoElement;
 
 const answerEl = document.querySelector('#answer');
 
@@ -32,7 +33,7 @@ export function addRemoteVideoElement(remoteStream: MediaStream) {
 
 export function addAnswerElement(offer: Offer, cb: () => void) {
     const newOfferEl = document.createElement('div');
-    newOfferEl.innerHTML = `<button class="btn btn-success col-1">Answer ${offer.offererUserId}</button>`;
+    newOfferEl.innerHTML = `<button class="btn btn-success col-12">Answer ${offer.offererUserId}</button>`;
     newOfferEl.addEventListener('click', cb);
     answerEl?.appendChild(newOfferEl);
 }

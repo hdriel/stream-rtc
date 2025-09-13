@@ -1,14 +1,15 @@
 import { RTCPeerConnectionClient, type Offer } from './source-code';
-import { getUserName, getToUserId } from './utils/user-details.ts';
+import { getUserName, getToUserId } from './utils/user-details';
 import {
     localVideoElement,
     remoteVideoElement,
     callButtonElement,
     addAnswerElement,
     scenario,
-} from './utils/elements.ts';
-import { connectSocketIO } from './utils/socket-io.ts';
-import { defaultDeviceChat } from './utils/device-media.ts';
+    hangupButtonElement,
+} from './utils/elements';
+import { connectSocketIO } from './utils/socket-io';
+import { defaultDeviceChat } from './utils/device-media';
 // import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 // @ts-ignore
@@ -33,4 +34,9 @@ pc.onOffersReceived((offers: Offer | Offer[]) => {
 callButtonElement?.addEventListener('click', async () => {
     const toUserId = getToUserId();
     return pc.callToUserId(toUserId, defaultDeviceChat);
+});
+
+hangupButtonElement?.addEventListener('click', async () => {
+    // const toUserId = getToUserId();
+    // return pc.closeConnection(toUserId);
 });

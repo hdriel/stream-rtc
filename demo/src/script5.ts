@@ -1,5 +1,5 @@
 import { RTCPeerConnectionClient, type Offer } from './source-code';
-import { getUserName, getRoomId } from './utils/user-details.ts';
+import { getUserName, getRoomId, setRoomId } from './utils/user-details.ts';
 import {
     localVideoElement,
     remoteVideoElement,
@@ -24,6 +24,13 @@ getRoomId();
 const socket = connectSocketIO((userId) => pc.updateUserId(userId));
 const pc = new RTCPeerConnectionClient(socket, { userId: getUserName() }, { debugMode: true });
 
+socket.on('join-user', async (userId: string) => {
+    // @ts-ignore
+    const [localStream, remoteStream] = await pc.call(userId, defaultDeviceChat);
+    // addRemoteVideoElement(remoteStream);
+    localVideoElement.srcObject = localStream;
+});
+
 pc.onError((err: any) => alert(JSON.stringify(err, null, 4)));
 pc.onRemoteStreamAdded(addRemoteVideoElement); // add dynamically remote videos
 pc.onOffersReceived((offers: Offer | Offer[]) => {
@@ -36,12 +43,10 @@ pc.onOffersReceived((offers: Offer | Offer[]) => {
 });
 
 joinRoomElement?.addEventListener('click', async () => {
+    setRoomId('the-kings');
+    callButtonElement.removeAttribute('hidden');
     socket.emit('join-room', getRoomId());
     scenario('Call to all user in room: ' + getRoomId());
     joinRoomElement.remove();
 });
-callButtonElement?.addEventListener('click', async () => {
-    const roomId = getRoomId();
-    const [localStream] = await pc.callToRoomId(roomId, defaultDeviceChat);
-    localVideoElement.srcObject = localStream;
-});
+callButtonElement?.setAttribute('hidden', '');

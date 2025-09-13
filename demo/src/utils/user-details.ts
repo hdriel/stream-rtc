@@ -1,6 +1,6 @@
 let _toUserId = 'Rob-????';
 let _userName = 'Rob-' + Math.floor(Math.random() * 100000);
-let _roomId = 'the_kings';
+let _roomId = '';
 
 export const password = 'x';
 
@@ -10,6 +10,7 @@ export const getUserName = () => _userName;
 export const updateToUserId = (userId: string) => (_toUserId = userId);
 export const getToUserId = () => _toUserId;
 export const getRoomId = () => _roomId;
+export const setRoomId = (roomId: string) => (_roomId = roomId);
 
 export function updateUserName(userName: string) {
     _userName = userName;
