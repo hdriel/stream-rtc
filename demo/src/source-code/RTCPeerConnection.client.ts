@@ -82,27 +82,7 @@ export class RTCPeerConnectionClient {
         return !this.didIOffer;
     }
 
-    public async callToUserId(userId: string, constraints?: MediaStreamConstraints): Promise<MediaStream[]> {
-        return this.call({ userId }, constraints);
-    }
-
-    public async callToRoomId(roomId: string, constraints?: MediaStreamConstraints): Promise<MediaStream[]> {
-        return this.call({ roomId }, constraints);
-    }
-
-    public async call(
-        {
-            userId,
-            roomId,
-        }:
-            | { userId?: string | string[]; roomId: string }
-            | { userId: string | string[]; roomId?: string }
-            | { userId?: string | string[]; roomId?: string } = {},
-        constraints?: MediaStreamConstraints
-    ): Promise<MediaStream[]> {
-        this.callToUserIds = ([] as string[]).concat(userId as string).filter((v) => v);
-        this._callToRoomId = roomId;
-
+    public async call(userId: string, constraints?: MediaStreamConstraints): Promise<MediaStream[]> {
         return new Promise(async (resolve) => {
             try {
                 this.debug(
@@ -110,44 +90,14 @@ export class RTCPeerConnectionClient {
                     constraints ?? this.DEFAULT_CONSTRAINTS
                 );
                 const localStream = await this.fetchUserMedia(constraints);
-
                 this.debug('Create RTC Peer Connection');
-                const remoteStreams = await this.createPeerConnection(userId);
-                this.debug('peerConnection is all set with our STUN servers sent over');
-
-                if (!Object.values(RTCPeerConnectionClient.peerConnections).every((p) => p.peerConnection)) {
-                    console.error('failed on call function', 'Peer connection not found');
-                    for (const cb of [...this.errorCallBacks].filter((cb) => typeof cb === 'function')) {
-                        this.debug(`call fire on errorCallBacks cb function`, cb.name);
-                        cb?.(new Error('Peer connection not found'));
-                    }
-                    resolve([]);
-                    return;
-                }
 
                 this.debug('call creating offer...');
-                await Promise.allSettled(
-                    Object.values(RTCPeerConnectionClient.peerConnections).map(async ({ userId, peerConnection }) => {
-                        if (!peerConnection) return;
-
-                        const offer = await peerConnection.createOffer();
-                        this.debug('offer', offer);
-
-                        this.debug('peerConnection.setLocalDescription', offer);
-                        await peerConnection.setLocalDescription(offer);
-
-                        this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
-                        this.socket.emit(this.socketEventsMapper.newOffer, offer, {
-                            roomId: this._callToRoomId,
-                            userIds: this.callToUserIds,
-                            userId,
-                        });
-                    })
-                );
+                const remoteStream = await this.createOfferConnection(userId);
 
                 this.didIOffer = true;
 
-                resolve([localStream, ...remoteStreams]);
+                resolve([localStream, remoteStream]);
             } catch (err: any) {
                 console.error(`failed on call function`, err);
                 for (const cb of [...this.errorCallBacks].filter((cb) => typeof cb === 'function')) {
@@ -157,6 +107,29 @@ export class RTCPeerConnectionClient {
                 resolve([]);
             }
         });
+    }
+
+    public async createOfferConnection(userId: string): Promise<MediaStream> {
+        const peerConnection = new RTCPeerConnection(this.peerConfiguration);
+        RTCPeerConnectionClient.peerConnections[userId] = {
+            userId,
+            remoteStream: new MediaStream(),
+            peerConnection,
+        };
+
+        const offer = await peerConnection.createOffer();
+        this.debug('offer', offer);
+
+        this.debug('peerConnection.setLocalDescription', offer);
+        await peerConnection.setLocalDescription(offer);
+
+        this.debug(`socket.emit(${this.socketEventsMapper.newOffer})`, offer);
+        this.socket.emit(this.socketEventsMapper.newOffer, offer, {
+            roomId: this._callToRoomId,
+            userId,
+        });
+
+        return RTCPeerConnectionClient.peerConnections[userId].remoteStream as MediaStream;
     }
 
     public async answerOffer(offerObj: Offer, constraints?: MediaStreamConstraints): Promise<MediaStream[]> {
@@ -270,6 +243,91 @@ export class RTCPeerConnectionClient {
         }
     }
 
+    private async handlePeerConnection(userId: string) {
+        RTCPeerConnectionClient.peerConnections[userId] = {
+            userId,
+            peerConnection: new RTCPeerConnection(this.peerConfiguration),
+            remoteStream: new MediaStream(),
+        };
+        const remoteStream = RTCPeerConnectionClient.peerConnections[userId].remoteStream as MediaStream;
+        const peerConnection = RTCPeerConnectionClient.peerConnections[userId].peerConnection as RTCPeerConnection;
+
+        this.debug('peerConnection initialized:', peerConnection.signalingState);
+
+        const index = Object.keys(RTCPeerConnectionClient.peerConnections).length - 1;
+        if (this.remoteVideoElements?.length) {
+            this.remoteVideoElements[index].setAttribute('data-user-id', userId);
+            this.remoteVideoElements[index].srcObject = remoteStream;
+        } else if (this.remoteVideoQuerySelector) {
+            const elements = document.querySelectorAll(this.remoteVideoQuerySelector);
+            const remoteVideoElements: HTMLVideoElement[] = [...elements] as HTMLVideoElement[];
+
+            if (remoteVideoElements[index]) {
+                remoteVideoElements[index].setAttribute('data-user-id', userId);
+                remoteVideoElements[index].srcObject = remoteStream;
+            } else {
+                const msg = `NOTE: document.querySelector(${this.remoteVideoQuerySelector})[${index}] => null, video element not found!`;
+                console.warn(msg);
+                this.debug(msg);
+            }
+        }
+        // } else if (this.remoteVideoElements) {
+        //     remoteVideoElement.setAttribute('data-user-id', userId);
+        //     remoteVideoElement.srcObject = remoteStream;
+        // }
+        else {
+            const debugMsg = `remoteVideoEl/remoteVideoQuerySelector elements not founds! not connecting to steam video tag element!`;
+            this.debug(debugMsg);
+            const warnMsg = `NOTE: The you dont provide any local stream elements, please make sure you connect the streams that returned form this function`;
+            console.warn(warnMsg);
+        }
+
+        this.localStream?.getTracks().forEach((track) => {
+            // add local tracks so that they can be sent once the connection is established
+            this.debug(`add local tracks so that they can be sent once the connection is established:`, track);
+            peerConnection.addTrack(track, this.localStream as MediaStream);
+        });
+
+        peerConnection.addEventListener('signalingstatechange', () => {
+            this.debug('signalingstatechange peerConnection.signalingState', peerConnection.signalingState);
+        });
+
+        peerConnection.addEventListener('icecandidate', (event) => {
+            if (!event?.candidate) return;
+
+            this.debug('........Ice candidate found!......');
+            this.debug(
+                `socket.emit(${this.socketEventsMapper.sendIceCandidateToSignalingServer}) [peerConnection.signalingState=${peerConnection.signalingState}]`
+            );
+            this.socket.emit(
+                this.socketEventsMapper.sendIceCandidateToSignalingServer,
+                {
+                    iceCandidate: event.candidate,
+                    iceUserId: this.userId,
+                    didIOffer: this.didIOffer,
+                } as IceCandidateOffer,
+                {
+                    userIds: ([] as string[]).concat(this.userId, this.callToUserIds).filter((v) => v),
+                    roomId: this._callToRoomId,
+                }
+            );
+        });
+
+        peerConnection.addEventListener('track', (trackEvent) => {
+            this.debug('Got a track from the other peer!', trackEvent);
+            trackEvent.streams.forEach((stream: MediaStream & { userId?: string }) => {
+                stream.getTracks().forEach((track: MediaStreamTrack) => {
+                    remoteStream.addTrack(track);
+                    this.debug('see something track data on remote stream video!!', track);
+                });
+            });
+        });
+
+        this.debug('peerConnection is all set with our STUN servers sent over');
+
+        return remoteStream;
+    }
+
     private async createPeerConnection(userId?: string | string[], offerObj?: Offer) {
         this.debug('peerConnection fetch us ICE candidates with peerConfiguration:', this.peerConfiguration);
         // is a caller so we stay with one caller peer connections for all
@@ -284,92 +342,23 @@ export class RTCPeerConnectionClient {
             console.error('todo: implement unknown userId case like public meeting');
         }
 
-        const handlePeerConnection = async (userId: string) => {
-            RTCPeerConnectionClient.peerConnections[userId] = {
-                userId,
-                peerConnection: new RTCPeerConnection(this.peerConfiguration),
-                remoteStream: new MediaStream(),
-            };
-            const remoteStream = RTCPeerConnectionClient.peerConnections[userId].remoteStream as MediaStream;
-            const peerConnection = RTCPeerConnectionClient.peerConnections[userId].peerConnection as RTCPeerConnection;
-
-            this.debug('peerConnection initialized:', peerConnection.signalingState);
-
-            const index = Object.keys(RTCPeerConnectionClient.peerConnections).length - 1;
-            if (this.remoteVideoElements?.length) {
-                this.remoteVideoElements[index].setAttribute('data-user-id', userId);
-                this.remoteVideoElements[index].srcObject = remoteStream;
-            } else if (this.remoteVideoQuerySelector) {
-                const elements = document.querySelectorAll(this.remoteVideoQuerySelector);
-                const remoteVideoElements: HTMLVideoElement[] = [...elements] as HTMLVideoElement[];
-
-                if (remoteVideoElements[index]) {
-                    remoteVideoElements[index].setAttribute('data-user-id', userId);
-                    remoteVideoElements[index].srcObject = remoteStream;
-                } else {
-                    const msg = `NOTE: document.querySelector(${this.remoteVideoQuerySelector})[${index}] => null, video element not found!`;
-                    console.warn(msg);
-                    this.debug(msg);
-                }
-            } else {
-                const debugMsg = `remoteVideoEl/remoteVideoQuerySelector elements not founds! not connecting to steam video tag element!`;
-                this.debug(debugMsg);
-                const warnMsg = `NOTE: The you dont provide any local stream elements, please make sure you connect the streams that returned form this function`;
-                console.warn(warnMsg);
-            }
-
-            this.localStream?.getTracks().forEach((track) => {
-                // add local tracks so that they can be sent once the connection is established
-                this.debug(`add local tracks so that they can be sent once the connection is established:`, track);
-                peerConnection.addTrack(track, this.localStream as MediaStream);
-            });
-
-            peerConnection.addEventListener('signalingstatechange', () => {
-                this.debug('signalingstatechange peerConnection.signalingState', peerConnection.signalingState);
-            });
-
-            peerConnection.addEventListener('icecandidate', (event) => {
-                if (!event?.candidate) return;
-
-                this.debug('........Ice candidate found!......');
-                this.debug(
-                    `socket.emit(${this.socketEventsMapper.sendIceCandidateToSignalingServer}) [peerConnection.signalingState=${peerConnection.signalingState}]`
-                );
-                this.socket.emit(this.socketEventsMapper.sendIceCandidateToSignalingServer, {
-                    iceCandidate: event.candidate,
-                    iceUserId: this.userId,
-                    didIOffer: this.didIOffer,
-                    callToUserIds: ([] as string[]).concat(this.userId, this.callToUserIds).filter((v) => v),
-                    _callToRoomId: this._callToRoomId,
-                } as IceCandidateOffer);
-            });
-
-            peerConnection.addEventListener('track', (trackEvent) => {
-                this.debug('Got a track from the other peer!', trackEvent);
-                trackEvent.streams.forEach((stream: MediaStream & { userId?: string }) => {
-                    stream.getTracks().forEach((track: MediaStreamTrack) => {
-                        remoteStream.addTrack(track);
-                        this.debug('see something track data on remote stream video!!', track);
-                    });
-                });
-            });
-
-            if (offerObj) {
-                this.debug('peerConnection.setRemoteDescription - will be set when we call from answerOffer');
-                await peerConnection.setRemoteDescription(offerObj.offer as RTCSessionDescriptionInit);
-                if (peerConnection.signalingState !== 'stable') {
-                    this.debug('unstable peerConnection.signalingState', peerConnection.signalingState);
-                    this.debug('should be have-remote-offer, because client2 has setRemoteDesc on the offer');
-                }
-            }
-
-            this.debug('peerConnection is all set with our STUN servers sent over');
-
-            return remoteStream;
-        };
-
         const userIds = ([] as string[]).concat(userId).filter((v) => v);
-        const remoteStreams = await Promise.allSettled(userIds.map((userId) => handlePeerConnection(userId)));
+        const remoteStreams = await Promise.allSettled(
+            userIds.map(async (userId) =>
+                this.handlePeerConnection(userId).then(async (remoteStream) => {
+                    if (offerObj) {
+                        const peerConnection = RTCPeerConnectionClient.peerConnections[userId].peerConnection;
+                        this.debug('peerConnection.setRemoteDescription - will be set when we call from answerOffer');
+                        await peerConnection?.setRemoteDescription(offerObj.offer as RTCSessionDescriptionInit);
+                        if (peerConnection?.signalingState !== 'stable') {
+                            this.debug('unstable peerConnection.signalingState', peerConnection?.signalingState);
+                            this.debug('should be have-remote-offer, because client2 has setRemoteDesc on the offer');
+                        }
+                    }
+                    return remoteStream;
+                })
+            )
+        );
 
         return remoteStreams
             .filter((remoteStreamPromise) => remoteStreamPromise.status === 'fulfilled')
@@ -410,6 +399,16 @@ export class RTCPeerConnectionClient {
     public offRemoteStreamAdded(cb: (remoteStream: MediaStream) => void) {
         this.remoteStreamAddedCallBacks.delete(cb);
         this.debug('offRemoteStreamAdded function callback removed:', cb.name);
+    }
+
+    closeConnection(userId: string) {
+        RTCPeerConnectionClient.peerConnections[userId]?.peerConnection?.close();
+        delete RTCPeerConnectionClient.peerConnections[userId];
+
+        if (this.localStream) {
+            this.localStream.getTracks().forEach((track) => track.stop());
+            this.localStream = null;
+        }
     }
 
     private init() {

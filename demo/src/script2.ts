@@ -36,5 +36,5 @@ pc.onOffersReceived((offers: Offer | Offer[]) => {
 
 callButtonElement?.addEventListener('click', async () => {
     const toUserId = getToUserId();
-    return pc.callToUserId(toUserId, defaultDeviceChat);
+    return pc.call(toUserId, defaultDeviceChat);
 });

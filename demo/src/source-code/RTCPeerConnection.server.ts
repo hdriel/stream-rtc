@@ -48,6 +48,10 @@ export class RTCPeerConnectionServer {
                     answererUserId: '',
                     answer: null,
                     answererIceCandidates: [],
+                    // offerForUserIds: ([] as string[])
+                    //     .concat(userIds as string[], this.userId)
+                    //     .filter((item, pos, arr) => item && arr.indexOf(item) === pos),
+                    // offerForRoomId: roomId,
                 };
                 RTCPeerConnectionServer.offers.push(offer);
 
@@ -100,12 +104,12 @@ export class RTCPeerConnectionServer {
                 this.socket.to(socketIdToAnswer).emit(this.socketEventsMapper.answerResponse, offerToUpdate);
 
                 const answererOffer: Offer = {
-                    offererUserId: offerObj.answererUserId,
-                    offer: offerObj.answer as RTCSessionDescriptionInit,
-                    offerIceCandidates: offerObj.answererIceCandidates,
-                    answererUserId: offerObj.offererUserId,
-                    answer: offerObj.offer,
-                    answererIceCandidates: offerObj.offerIceCandidates,
+                    offererUserId: offerToUpdate.answererUserId,
+                    offer: offerToUpdate.answer as RTCSessionDescriptionInit,
+                    offerIceCandidates: offerToUpdate.answererIceCandidates,
+                    answererUserId: offerToUpdate.offererUserId,
+                    answer: offerToUpdate.offer,
+                    answererIceCandidates: offerToUpdate.offerIceCandidates,
                 };
                 this.socket.emit(this.socketEventsMapper.answerResponse, answererOffer);
             }
@@ -113,10 +117,11 @@ export class RTCPeerConnectionServer {
 
         this.socket.on(
             this.socketEventsMapper.sendIceCandidateToSignalingServer,
-            (iceCandidateObj: IceCandidateOffer) => {
+            // @ts-ignore
+            (iceCandidateObj: IceCandidateOffer, { roomId, userIds }: { roomId?: string; userIds?: string[] } = {}) => {
                 // todo: check to send the emit to specific userId/roomId
                 // @ts-ignore
-                const { didIOffer, iceUserId, iceCandidate, callToUserIds, callToRoomId } = iceCandidateObj;
+                const { didIOffer, iceUserId, iceCandidate } = iceCandidateObj;
                 // console.log(iceCandidate);
                 if (didIOffer) {
                     //this ice is coming from the offerer. Send to the answerer

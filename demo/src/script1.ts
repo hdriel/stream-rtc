@@ -33,10 +33,15 @@ pc.onOffersReceived((offers: Offer | Offer[]) => {
 
 callButtonElement?.addEventListener('click', async () => {
     const toUserId = getToUserId();
-    return pc.callToUserId(toUserId, defaultDeviceChat);
+    return pc.call(toUserId, defaultDeviceChat);
 });
 
 hangupButtonElement?.addEventListener('click', async () => {
-    // const toUserId = getToUserId();
-    // return pc.closeConnection(toUserId);
+    const toUserId = getToUserId();
+    return pc.closeConnection(toUserId);
+});
+
+hangupButtonElement?.addEventListener('click', async () => {
+    const toUserId = getToUserId();
+    return pc.closeConnection(toUserId);
 });
