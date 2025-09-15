@@ -7,9 +7,10 @@ interface PeerConnectionInfo {
     peerConnection: RTCPeerConnection;
     remoteStream: MediaStream;
     isConnected: boolean;
+    didIOffer: boolean; // NEW: Track who initiated the connection
 }
 
-export class RTCMultiUserConnectionsClient {
+export class RTCUserConnectionClient {
     private readonly socket: Socket;
     public localStream: MediaStream | null = null;
     private readonly peerConnections: Map<string, PeerConnectionInfo> = new Map();
@@ -24,7 +25,7 @@ export class RTCMultiUserConnectionsClient {
     private readonly errorCallBacks: Set<(error: Error, userId?: string) => void>;
     private readonly remoteStreamAddedCallBacks: Set<(remoteStream: MediaStream, userId: string) => void>;
     private readonly userDisconnectedCallBacks: Set<(userId: string) => void>;
-    private readonly userId: string;
+    private _userId: string;
     private readonly debugMode: boolean;
 
     constructor(
@@ -43,7 +44,7 @@ export class RTCMultiUserConnectionsClient {
         } = {}
     ) {
         this.socket = socket;
-        this.userId = elements.userId;
+        this._userId = elements.userId;
         this.localVideoElement = elements.localVideoElement;
         this.localVideoQuerySelector = elements.localVideoQuerySelector;
 
@@ -69,21 +70,25 @@ export class RTCMultiUserConnectionsClient {
 
         this.init();
     }
+    set userId(userId: string) {
+        this._userId = userId;
+    }
 
     public debug(...args: any[]) {
         if (!this.debugMode) return;
-        console.debug(`[MultiPeer-${this.userId}]`, ...args);
+        console.debug(`[Peer-${this._userId}]`, ...args);
     }
 
     // יצירת קריאה למשתמשים מרובים
-    public async callUsers(
-        userIds: string[],
+    public async callUser(
+        userId: string | string[],
         constraints?: MediaStreamConstraints
     ): Promise<{
         localStream: MediaStream;
         remoteStreams: Map<string, MediaStream>;
         errors: Map<string, Error>;
     }> {
+        const userIds = ([] as string[]).concat(userId);
         this.debug('Starting calls to users:', userIds);
 
         const localStream = await this.fetchUserMedia(constraints);
@@ -155,6 +160,7 @@ export class RTCMultiUserConnectionsClient {
             peerConnection,
             remoteStream,
             isConnected: false,
+            didIOffer: true, // WE are making the offer - so we initiated
         };
 
         this.peerConnections.set(userId, peerInfo);
@@ -191,6 +197,7 @@ export class RTCMultiUserConnectionsClient {
             peerConnection,
             remoteStream,
             isConnected: false,
+            didIOffer: false, // WE are answering an offer - so we did NOT initiate
         };
 
         this.peerConnections.set(userId, peerInfo);
@@ -210,7 +217,7 @@ export class RTCMultiUserConnectionsClient {
         await peerConnection.setLocalDescription(answer);
 
         offerObj.answer = answer;
-        offerObj.answererUserId = this.userId;
+        offerObj.answererUserId = this._userId;
 
         this.debug(`Sending answer to user ${userId}`);
         const offerIceCandidates = await this.socket.emitWithAck(this.socketEventsMapper.newAnswer, offerObj);
@@ -244,16 +251,31 @@ export class RTCMultiUserConnectionsClient {
     }
 
     private setupPeerConnectionHandlers(userId: string, peerConnection: RTCPeerConnection) {
+        // ICE candidate handling with correct didIOffer determination
         peerConnection.addEventListener('icecandidate', (event) => {
             if (event.candidate) {
                 this.debug(`Sending ICE candidate for user ${userId}`);
+
+                // Get the correct didIOffer value from our stored peer info
+                const peerInfo = this.peerConnections.get(userId);
+                const didIOffer = peerInfo?.didIOffer ?? true; // fallback to true if somehow not found
+
                 this.socket.emit(this.socketEventsMapper.sendIceCandidateToSignalingServer, {
                     iceCandidate: event.candidate,
-                    iceUserId: this.userId,
+                    iceUserId: this._userId,
                     targetUserId: userId,
-                    didIOffer: true, // במקרה של multi-peer connection, אנחנו תמיד callers
+                    didIOffer: didIOffer, // Now correctly determined!
                 });
             }
+        });
+
+        // Enhanced debugging for connection states
+        peerConnection.addEventListener('iceconnectionstatechange', () => {
+            this.debug(`ICE connection state with user ${userId}:`, peerConnection.iceConnectionState);
+        });
+
+        peerConnection.addEventListener('icegatheringstatechange', () => {
+            this.debug(`ICE gathering state with user ${userId}:`, peerConnection.iceGatheringState);
         });
 
         peerConnection.addEventListener('track', (trackEvent) => {
@@ -266,18 +288,30 @@ export class RTCMultiUserConnectionsClient {
             }
         });
 
+        // Enhanced connectionstatechange handler with more debugging
         peerConnection.addEventListener('connectionstatechange', () => {
             const state = peerConnection.connectionState;
-            this.debug(`Connection state with user ${userId} changed:`, state);
-
             const peerInfo = this.peerConnections.get(userId);
+
+            this.debug(`Connection state with user ${userId} changed:`, state);
+            this.debug(`  - ICE connection state:`, peerConnection.iceConnectionState);
+            this.debug(`  - ICE gathering state:`, peerConnection.iceGatheringState);
+            this.debug(`  - Signaling state:`, peerConnection.signalingState);
+            this.debug(`  - Did I offer:`, peerInfo?.didIOffer);
+
             if (peerInfo) {
                 peerInfo.isConnected = state === 'connected';
 
                 if (state === 'connected') {
+                    this.debug(`✅ Successfully connected to user ${userId}`);
                     this.triggerRemoteStreamAdded(peerInfo.remoteStream, userId);
                 } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                    this.debug(`❌ Connection with user ${userId} ended: ${state}`);
                     this.handleUserDisconnected(userId);
+                } else if (state === 'connecting') {
+                    this.debug(`🔄 Connecting to user ${userId}...`);
+                } else if (state === 'new') {
+                    this.debug(`🆕 New connection with user ${userId}`);
                 }
             }
         });
@@ -331,16 +365,26 @@ export class RTCMultiUserConnectionsClient {
         if (targetUserId) {
             const peerInfo = this.peerConnections.get(targetUserId);
             if (peerInfo) {
-                await peerInfo.peerConnection.addIceCandidate(iceCandidate);
-                this.debug(`Added ICE candidate for user ${targetUserId}`);
+                try {
+                    await peerInfo.peerConnection.addIceCandidate(iceCandidate);
+                    this.debug(`✅ Added ICE candidate for user ${targetUserId}`);
+                } catch (error) {
+                    this.debug(`❌ Failed to add ICE candidate for user ${targetUserId}:`, error);
+                }
+            } else {
+                this.debug(`⚠️ No peer connection found for user ${targetUserId} when adding ICE candidate`);
             }
         } else {
             // אם אין target ספציפי, מוסיף לכל הקשרים (backward compatibility)
             const promises = Array.from(this.peerConnections.values()).map(async (peerInfo) => {
-                await peerInfo.peerConnection.addIceCandidate(iceCandidate);
+                try {
+                    await peerInfo.peerConnection.addIceCandidate(iceCandidate);
+                    this.debug(`✅ Added ICE candidate for user ${peerInfo.userId}`);
+                } catch (error) {
+                    this.debug(`❌ Failed to add ICE candidate for user ${peerInfo.userId}:`, error);
+                }
             });
             await Promise.allSettled(promises);
-            this.debug('Added ICE candidate to all connections');
         }
     }
 
@@ -438,6 +482,12 @@ export class RTCMultiUserConnectionsClient {
 
     public getRemoteStream(userId: string): MediaStream | null {
         return this.peerConnections.get(userId)?.remoteStream || null;
+    }
+
+    // NEW: Get who initiated the connection
+    public didIInitiateConnection(userId: string): boolean | null {
+        const peerInfo = this.peerConnections.get(userId);
+        return peerInfo ? peerInfo.didIOffer : null;
     }
 
     // Event listeners

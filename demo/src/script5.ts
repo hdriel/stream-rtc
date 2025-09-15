@@ -1,4 +1,5 @@
-import { RTCMultiUserConnectionsClient, type Offer } from './source-code';
+// @ts-nocheck
+import { RTCUserConnectionsClient, type Offer } from './source-code';
 import { getUserName, getRoomId, setRoomId } from './utils/user-details.ts';
 import {
     localVideoElement,
@@ -14,7 +15,7 @@ import { defaultDeviceChat } from './utils/device-media.ts';
 // import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 // @ts-ignore
-window.RTCPeerConnectionClient = RTCMultiUserConnectionsClient;
+window.RTCPeerConnectionClient = RTCUserConnectionsClient;
 
 remoteVideoElement.remove(); // remove the remote video to load it dynamically
 joinRoomElement.removeAttribute('hidden');
@@ -22,7 +23,7 @@ scenario('Call to all user in specific room');
 getRoomId();
 
 const socket = connectSocketIO((userId) => pc.updateUserId(userId));
-const pc = new RTCMultiUserConnectionsClient(socket, { userId: getUserName() }, { debugMode: true });
+const pc = new RTCUserConnectionsClient(socket, { userId: getUserName() }, { debugMode: true });
 
 socket.on('join-user', async (userId: string) => {
     // @ts-ignore

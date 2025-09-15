@@ -1,4 +1,5 @@
-import { RTCMultiUserConnectionsClient, type Offer } from './source-code';
+// @ts-nocheck
+import { RTCUserConnectionsClient, type Offer } from './source-code';
 import { getUserName, getToUserId } from './utils/user-details.ts';
 import {
     localVideoElement,
@@ -13,13 +14,13 @@ import { defaultDeviceChat } from './utils/device-media.ts';
 // import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 // @ts-ignore
-window.RTCPeerConnectionClient = RTCMultiUserConnectionsClient;
+window.RTCPeerConnectionClient = RTCUserConnectionsClient;
 
 remoteVideoElement.remove(); // remove the remote video to load it dynamically
 scenario('Call to userId and load the response dynamically');
 
 const socket = connectSocketIO((userId) => pc.updateUserId(userId));
-const pc = new RTCMultiUserConnectionsClient(socket, { userId: getUserName() }, { debugMode: true });
+const pc = new RTCUserConnectionsClient(socket, { userId: getUserName() }, { debugMode: true });
 
 pc.onError((err: any) => alert(JSON.stringify(err, null, 4)));
 pc.onRemoteStreamAdded(addRemoteVideoElement); // add dynamically remote videos

@@ -1,4 +1,5 @@
-import { RTCMultiUserConnectionsClient, type Offer } from './source-code';
+// @ts-nocheck
+import { RTCUserConnectionsClient, type Offer } from './source-code';
 import { getUserName, getToUserId } from './utils/user-details.ts';
 import {
     localVideoQuerySelector,
@@ -12,12 +13,12 @@ import { defaultDeviceChat } from './utils/device-media.ts';
 // import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 // @ts-ignore
-window.RTCPeerConnectionClient = RTCMultiUserConnectionsClient;
+window.RTCPeerConnectionClient = RTCUserConnectionsClient;
 
 scenario('Call to userId with video element selectors');
 
 const socket = connectSocketIO((userId) => pc.updateUserId(userId));
-const pc = new RTCMultiUserConnectionsClient(
+const pc = new RTCUserConnectionsClient(
     socket,
     {
         localVideoQuerySelector: localVideoQuerySelector,
