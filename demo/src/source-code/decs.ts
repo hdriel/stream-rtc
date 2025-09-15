@@ -29,6 +29,4 @@ export interface IceCandidateOffer {
 }
 
 // @ts-ignore
-export enum RTCPeerConnectionError {
-    fetchUserMedia,
-}
+export class RTCPeerConnectionError extends Error {}

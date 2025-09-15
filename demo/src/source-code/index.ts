@@ -1,4 +1,4 @@
-export * from './RTCPeerConnection.client';
+export * from './RTCMultiUserConnections.client.ts';
 export * from './RTCPeerConnection.server';
 export * from './decs';
 export * from './consts';

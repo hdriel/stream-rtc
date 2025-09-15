@@ -4,6 +4,10 @@
     "simple-rtc-peer-connection": {
       "signature": "d8bf40484de38442a3dedacd7bd7f502",
       "file": true
+    },
+    "stream-rtc": {
+      "signature": "35ff9b20bd99ead8fe841d58c0b88d51",
+      "file": true
     }
   }
 }

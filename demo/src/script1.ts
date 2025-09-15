@@ -1,4 +1,4 @@
-import { RTCPeerConnectionClient, type Offer } from './source-code';
+import { RTCMultiUserConnectionsClient, type Offer } from './source-code';
 import { getUserName, getToUserId } from './utils/user-details';
 import {
     localVideoElement,
@@ -13,12 +13,12 @@ import { defaultDeviceChat } from './utils/device-media';
 // import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 // @ts-ignore
-window.RTCPeerConnectionClient = RTCPeerConnectionClient;
+window.RTCPeerConnectionClient = RTCMultiUserConnectionsClient;
 
 scenario('Call to userId with video elements');
 
 const socket = connectSocketIO((userId) => pc.updateUserId(userId));
-const pc = new RTCPeerConnectionClient(
+const pc = new RTCMultiUserConnectionsClient(
     socket,
     { localVideoElement, remoteVideoElement, userId: getUserName() },
     { debugMode: true }
