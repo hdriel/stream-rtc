@@ -19,8 +19,6 @@ export class RTCUserConnectionClient {
     private readonly peerConfiguration: RTCConfiguration;
     private readonly localVideoElement?: HTMLVideoElement;
     private readonly localVideoQuerySelector?: string;
-    private readonly remoteVideoElements?: HTMLVideoElement[];
-    private readonly remoteVideoQuerySelector?: string;
     private readonly offerCallBacks: Set<(offers: Offer[]) => void>;
     private readonly errorCallBacks: Set<(error: Error, userId?: string) => void>;
     private readonly remoteStreamAddedCallBacks: Set<(remoteStream: MediaStream, userId: string) => void>;
@@ -34,8 +32,6 @@ export class RTCUserConnectionClient {
             userId: string;
             localVideoElement?: HTMLVideoElement;
             localVideoQuerySelector?: string;
-            remoteVideoElement?: HTMLVideoElement | HTMLVideoElement[];
-            remoteVideoElementsQuerySelector?: string;
         },
         options: {
             debugMode?: boolean;
@@ -47,17 +43,6 @@ export class RTCUserConnectionClient {
         this._userId = elements.userId;
         this.localVideoElement = elements.localVideoElement;
         this.localVideoQuerySelector = elements.localVideoQuerySelector;
-
-        // טיפול ב-remote video elements
-        if (Array.isArray(elements.remoteVideoElement)) {
-            this.remoteVideoElements = elements.remoteVideoElement;
-        } else if (elements.remoteVideoElement) {
-            this.remoteVideoElements = [elements.remoteVideoElement];
-        } else {
-            this.remoteVideoElements = [];
-        }
-
-        this.remoteVideoQuerySelector = elements.remoteVideoElementsQuerySelector;
 
         this.debugMode = options.debugMode ?? false;
         this.socketEventsMapper = options.socketEventsMapper || SOCKET_EVENTS;
@@ -85,8 +70,9 @@ export class RTCUserConnectionClient {
         constraints?: MediaStreamConstraints
     ): Promise<{
         localStream: MediaStream;
-        remoteStreams: Map<string, MediaStream>;
         errors: Map<string, Error>;
+        remoteStream: MediaStream | null;
+        remoteStreams: Map<string, MediaStream>;
     }> {
         const userIds = ([] as string[]).concat(userId);
         this.debug('Starting calls to users:', userIds);
@@ -109,7 +95,12 @@ export class RTCUserConnectionClient {
 
         await Promise.allSettled(connectionPromises);
 
-        return { localStream, remoteStreams, errors };
+        return {
+            localStream,
+            errors,
+            remoteStreams: remoteStreams,
+            remoteStream: typeof userId === 'string' ? (remoteStreams.get(userId) as MediaStream) : null,
+        };
     }
 
     // מענה למספר offers
@@ -165,7 +156,6 @@ export class RTCUserConnectionClient {
 
         this.peerConnections.set(userId, peerInfo);
         this.setupPeerConnectionHandlers(userId, peerConnection);
-        this.attachRemoteStreamToVideo(remoteStream, userId);
 
         // הוספת local tracks
         this.localStream?.getTracks().forEach((track) => {
@@ -202,7 +192,6 @@ export class RTCUserConnectionClient {
 
         this.peerConnections.set(userId, peerInfo);
         this.setupPeerConnectionHandlers(userId, peerConnection);
-        this.attachRemoteStreamToVideo(remoteStream, userId);
 
         // הוספת local tracks
         this.localStream?.getTracks().forEach((track) => {
@@ -229,25 +218,6 @@ export class RTCUserConnectionClient {
         });
 
         return remoteStream;
-    }
-
-    private attachRemoteStreamToVideo(stream: MediaStream, userId: string) {
-        // מציאת אלמנט וידיאו פנוי
-        const peerIndex = Array.from(this.peerConnections.keys()).indexOf(userId);
-
-        if (this.remoteVideoElements && this.remoteVideoElements[peerIndex]) {
-            this.remoteVideoElements[peerIndex].setAttribute('data-user-id', userId);
-            this.remoteVideoElements[peerIndex].srcObject = stream;
-        } else if (this.remoteVideoQuerySelector) {
-            const elements = document.querySelectorAll(this.remoteVideoQuerySelector);
-            const videoElement = elements[peerIndex] as HTMLVideoElement;
-            if (videoElement) {
-                videoElement.setAttribute('data-user-id', userId);
-                videoElement.srcObject = stream;
-            } else {
-                console.warn(`No available video element for user ${userId}`);
-            }
-        }
     }
 
     private setupPeerConnectionHandlers(userId: string, peerConnection: RTCPeerConnection) {
@@ -453,12 +423,6 @@ export class RTCUserConnectionClient {
 
         // ניקוי כל video elements
         if (this.localVideoElement) this.localVideoElement.srcObject = null;
-        if (this.remoteVideoElements) {
-            this.remoteVideoElements.forEach((el) => {
-                el.srcObject = null;
-                el.removeAttribute('data-user-id');
-            });
-        }
     }
 
     // גישה למידע

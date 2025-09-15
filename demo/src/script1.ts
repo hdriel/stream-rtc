@@ -26,15 +26,7 @@ const socket = connectSocketIO((userId) => {
 });
 
 // Create RTCUserConnectionClient instance
-const pc = new RTCUserConnectionClient(
-    socket,
-    {
-        userId: getUserName(),
-        localVideoElement,
-        remoteVideoElement,
-    },
-    { debugMode: true }
-);
+const pc = new RTCUserConnectionClient(socket, { userId: getUserName(), localVideoElement }, { debugMode: true });
 
 // Set up error handling
 pc.onError((err: Error, userId?: string) => {
@@ -71,7 +63,6 @@ pc.onOffersReceived((offers: Offer[]) => {
 // Handle remote stream added
 pc.onRemoteStreamAdded((stream: MediaStream, userId: string) => {
     console.log('Remote stream added for user:', userId);
-    debugger;
 
     // If using multiple video elements, you might want to handle this differently
     if (remoteVideoElement) {
@@ -119,6 +110,8 @@ callButtonElement?.addEventListener('click', async () => {
 
         if (result.remoteStreams.size > 0) {
             console.log('Successfully connected to users:', Array.from(result.remoteStreams.keys()));
+            remoteVideoElement.srcObject = result.remoteStream;
+            remoteVideoElement.setAttribute('data-user-id', toUserId);
         }
     } catch (error) {
         console.error('Failed to start call:', error);
