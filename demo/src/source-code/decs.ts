@@ -34,9 +34,9 @@ export interface IceCandidateOffer {
     iceCandidate: RTCIceCandidate;
 
     // Routing information
-    targetUserId?: string; // Specific target user for P2P
-    callToUserIds?: string[]; // Multiple target users
-    callToRoomId?: string; // Room-based routing
+    targetUserId: string;
+    roomId?: string;
+    senderUserId: string;
 }
 
 // Room-related interfaces

@@ -113,14 +113,8 @@ export class RTCPeerConnectionServer {
         // Handle ICE candidates
         this.socket.on(
             this.socketEventsMapper.sendIceCandidateToSignalingServer,
-            (
-                iceCandidateObj: IceCandidateOffer,
-                data: {
-                    roomId?: string;
-                    userIds?: string[];
-                } = {}
-            ) => {
-                this.handleIceCandidate(iceCandidateObj, data);
+            (iceCandidateObj: IceCandidateOffer) => {
+                this.handleIceCandidate(iceCandidateObj);
             }
         );
 
@@ -313,16 +307,14 @@ export class RTCPeerConnectionServer {
         }
     }
 
-    private handleIceCandidate(iceCandidateObj: IceCandidateOffer, data: { roomId?: string; userIds?: string[] }) {
-        const { didIOffer, iceUserId, iceCandidate, targetUserId, callToUserIds, callToRoomId } = iceCandidateObj;
+    private handleIceCandidate(iceCandidateObj: IceCandidateOffer) {
+        const { didIOffer, iceUserId, iceCandidate, targetUserId, roomId, senderUserId } = iceCandidateObj;
 
         this.debug('ICE candidate received:', {
             iceUserId,
             targetUserId,
-            callToUserIds,
-            callToRoomId,
-            dataRoomId: data.roomId,
-            dataUserIds: data.userIds,
+            roomId,
+            senderUserId,
             didIOffer,
         });
 
@@ -330,19 +322,16 @@ export class RTCPeerConnectionServer {
         if (targetUserId) {
             const targetSocketId = RTCPeerConnectionServer.connectedSockets[targetUserId];
             if (targetSocketId) {
-                this.socket
-                    .to(targetSocketId)
-                    .emit(this.socketEventsMapper.receivedIceCandidateFromServer, {
-                        iceCandidate,
-                        targetUserId: iceUserId,
-                    });
+                this.socket.to(targetSocketId).emit(this.socketEventsMapper.receivedIceCandidateFromServer, {
+                    iceCandidate,
+                    targetUserId: iceUserId,
+                });
                 this.debug('ICE candidate sent to specific user:', targetUserId);
                 return;
             }
         }
 
         // Priority 2: Room-based routing (from iceCandidateObj or data)
-        const roomId = callToRoomId || data.roomId;
         if (roomId) {
             const room = RTCPeerConnectionServer.rooms.get(roomId);
             if (room && room.participants.includes(iceUserId)) {
@@ -352,12 +341,10 @@ export class RTCPeerConnectionServer {
                     .forEach((userId) => {
                         const socketId = RTCPeerConnectionServer.connectedSockets[userId];
                         if (socketId) {
-                            this.socket
-                                .to(socketId)
-                                .emit(this.socketEventsMapper.receivedIceCandidateFromServer, {
-                                    iceCandidate,
-                                    targetUserId: iceUserId,
-                                });
+                            this.socket.to(socketId).emit(this.socketEventsMapper.receivedIceCandidateFromServer, {
+                                iceCandidate,
+                                targetUserId: iceUserId,
+                            });
                         }
                     });
                 this.debug('ICE candidate sent to room participants:', roomId);
@@ -366,22 +353,15 @@ export class RTCPeerConnectionServer {
         }
 
         // Priority 3: Multi-user routing (from iceCandidateObj or data)
-        const userIds = callToUserIds || data.userIds;
-        if (userIds && userIds.length > 0) {
-            userIds
-                .filter((userId) => userId !== iceUserId)
-                .forEach((userId) => {
-                    const socketId = RTCPeerConnectionServer.connectedSockets[userId];
-                    if (socketId) {
-                        this.socket
-                            .to(socketId)
-                            .emit(this.socketEventsMapper.receivedIceCandidateFromServer, {
-                                iceCandidate,
-                                targetUserId: iceUserId,
-                            });
-                    }
+        if (targetUserId) {
+            const socketId = RTCPeerConnectionServer.connectedSockets[targetUserId];
+            if (socketId) {
+                this.socket.to(socketId).emit(this.socketEventsMapper.receivedIceCandidateFromServer, {
+                    iceCandidate,
+                    targetUserId: iceUserId,
                 });
-            this.debug('ICE candidate sent to specific users:', userIds);
+            }
+            this.debug('ICE candidate sent to specific users:', targetUserId);
             return;
         }
 
@@ -607,7 +587,7 @@ export class RTCPeerConnectionServer {
     }
 
     private generateRoomId(): string {
-        return Math.random().toString(36).substr(2, 9);
+        return Math.random().toString(36).substring(2, 9);
     }
 
     private broadcastRoomListUpdate() {
