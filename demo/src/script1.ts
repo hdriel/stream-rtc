@@ -112,8 +112,11 @@ pc.onUserDisconnected((userId: string) => {
 
     // Clean up video elements for disconnected user
     const videoElement = document.querySelector(`video[data-user-id="${userId}"]`);
-    (videoElement as HTMLVideoElement).srcObject = null;
-    videoElement?.removeAttribute('data-user-id');
+    if (videoElement) {
+        (videoElement as HTMLVideoElement).srcObject = null;
+        (videoElement as HTMLVideoElement)?.remove();
+    }
+    document.querySelector(`button[data-user-id="${userId}"]`)?.remove();
 });
 
 // Handle hangup button click
