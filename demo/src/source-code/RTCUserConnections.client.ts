@@ -145,6 +145,16 @@ export class RTCUserConnectionClient {
         return { localStream, remoteStreams, errors };
     }
 
+    public async cancelOffers(offer: Offer | Offer[]): Promise<void> {
+        const offers = ([] as Offer[]).concat(offer);
+        this.debug(
+            'Canceling offers from users:',
+            offers.map((o) => o.offererUserId)
+        );
+
+        this.socket.emit(this.socketEventsMapper.cancelOffers, offers);
+    }
+
     private async createOfferConnection(userId: string): Promise<MediaStream> {
         if (this.peerConnections.has(userId)) {
             throw new Error(`Connection with user ${userId} already exists`);

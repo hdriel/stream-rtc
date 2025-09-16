@@ -8,7 +8,7 @@ export const SOCKET_EVENTS: SocketEventType = {
     newOfferAwaiting: 'newOfferAwaiting',
     answerResponse: 'answerResponse',
     availableOffers: 'availableOffers',
-    cancelOffer: 'cancelOffer',
+    cancelOffers: 'cancelOffers',
 };
 
 export const PEER_CONFIGURATION: RTCConfiguration = {

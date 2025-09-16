@@ -97,8 +97,8 @@ export class RTCPeerConnectionServer {
             }
         );
 
-        this.socket.on(this.socketEventsMapper.cancelOffer, (offerObj: Offer) => {
-            this.handleAbortAnswer(offerObj);
+        this.socket.on(this.socketEventsMapper.cancelOffers, (offerObj: Offer | Offer[]) => {
+            ([] as Offer[]).concat(offerObj).forEach((offer) => this.handleAbortAnswer(offer));
         });
 
         // Handle room answers specifically

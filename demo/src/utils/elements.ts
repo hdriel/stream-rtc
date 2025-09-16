@@ -54,13 +54,28 @@ export function removeRemoteVideoElement(userId: string) {
     document.querySelector(`.video-container[data-user-id="${userId}"]`)?.remove();
 }
 
-export function addAnswerElement(offer: Offer, cb: () => void) {
+export function addAnswerElement(offer: Offer, answerCB: () => void, cancelCB: () => void) {
     const newOfferEl = document.createElement('div');
-    newOfferEl.innerHTML = `<button class="btn btn-success col-12 mb-3">Answer ${offer.offererUserId}</button>`;
+    newOfferEl.innerHTML = `
+        <button class="btn btn-success col-12 mb-3 d-flex justify-content-between">
+            <span class="d-flex align-items-center">Answer ${offer.offererUserId}</span>
+        </button>
+    `;
     newOfferEl.addEventListener('click', () => {
-        cb?.();
+        answerCB?.();
         newOfferEl.remove();
     });
+
+    const cancelOfferEl = document.createElement('button');
+    cancelOfferEl.className = 'cancel-offer btn btn-danger';
+    cancelOfferEl.textContent = 'Cancel';
+    cancelOfferEl.addEventListener('click', () => {
+        cancelCB?.();
+        newOfferEl.remove();
+    });
+
+    newOfferEl.children[0].appendChild(cancelOfferEl);
+
     answerEl?.appendChild(newOfferEl);
 }
 

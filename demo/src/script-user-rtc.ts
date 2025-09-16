@@ -135,20 +135,32 @@ pc.onOffersReceived((offers: Offer[]) => {
         console.log('Processing offer from:', offer.offererUserId);
 
         // Add answer button for each offer
-        addAnswerElement(offer, async () => {
-            try {
-                console.log('Answering offer from:', offer.offererUserId);
-                const result = await pc.answerOffers([offer], defaultDeviceChat);
-                console.log('Answer result:', result);
+        addAnswerElement(
+            offer,
+            async () => {
+                try {
+                    console.log('Answering offer from:', offer.offererUserId);
+                    const result = await pc.answerOffers([offer], defaultDeviceChat);
+                    console.log('Answer result:', result);
 
-                if (result.errors.size > 0) {
-                    console.error('Errors in answering:', Array.from(result.errors.entries()));
+                    if (result.errors.size > 0) {
+                        console.error('Errors in answering:', Array.from(result.errors.entries()));
+                    }
+                } catch (error) {
+                    console.error('Failed to answer offer:', error);
+                    alert('Failed to answer call: ' + (error as Error).message);
                 }
-            } catch (error) {
-                console.error('Failed to answer offer:', error);
-                alert('Failed to answer call: ' + (error as Error).message);
+            },
+            async () => {
+                try {
+                    console.log('Canceling offer from:', offer.offererUserId);
+                    await pc.cancelOffers([offer]);
+                } catch (error) {
+                    console.error('Failed to cancel offer:', error);
+                    alert('Failed to answer call: ' + (error as Error).message);
+                }
             }
-        });
+        );
     });
 });
 
