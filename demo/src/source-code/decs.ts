@@ -5,6 +5,7 @@ export type EVENT_NAME =
     | 'receivedIceCandidateFromServer'
     | 'newOfferAwaiting'
     | 'answerResponse'
+    | 'cancelOffer'
     | 'availableOffers';
 
 export type SocketEventType = Record<EVENT_NAME, string>;
