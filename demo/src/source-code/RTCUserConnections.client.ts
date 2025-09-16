@@ -56,6 +56,10 @@ export class RTCUserConnectionClient {
         this.init();
     }
 
+    get userId() {
+        return this._userId;
+    }
+
     set userId(userId: string) {
         this._userId = userId;
     }
@@ -313,6 +317,7 @@ export class RTCUserConnectionClient {
         }
 
         if (this.localVideoElement) {
+            this.localVideoElement.setAttribute('data-user-id', this._userId);
             this.localVideoElement.srcObject = stream;
         } else {
             console.warn(`Local video element not found: ${this.localVideoQuerySelector}`);
@@ -432,7 +437,7 @@ export class RTCUserConnectionClient {
 
         const videoElements = document.querySelectorAll<HTMLVideoElement>(`video[data-user-id]`);
         videoElements.forEach((el) => {
-            if (el && el?.dataset.userId !== this.userId) {
+            if (el && el?.dataset.userId !== this._userId) {
                 (el as HTMLVideoElement).srcObject = null;
                 el.removeAttribute('data-user-id');
                 el.remove();

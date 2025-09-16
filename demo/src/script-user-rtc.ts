@@ -2,13 +2,13 @@ import { RTCUserConnectionClient, type Offer } from './source-code';
 import { getUserName } from './utils/user-details';
 import {
     localVideoElement,
-    remoteVideoElement,
     callButtonElement,
     addAnswerElement,
     scenario,
     hangupButtonElement,
     addCallElement,
     addRemoteVideoElement,
+    removeRemoteVideoElement,
 } from './utils/elements';
 import { connectSocketIO } from './utils/socket-io';
 import { defaultDeviceChat } from './utils/device-media';
@@ -18,8 +18,7 @@ import { defaultDeviceChat } from './utils/device-media';
 window.RTCUserConnectionClient = RTCUserConnectionClient;
 
 scenario('Multi/User Connections with video elements');
-callButtonElement.remove();
-remoteVideoElement.remove();
+callButtonElement?.remove();
 
 async function onClickHangoutButtonHandler(element?: HTMLButtonElement, toUserId?: string) {
     try {
@@ -35,13 +34,12 @@ async function onClickHangoutButtonHandler(element?: HTMLButtonElement, toUserId
         if (localVideoElement) localVideoElement.srcObject = null;
         // Clear any video elements with user IDs
         const videoElements = toUserId
-            ? document.querySelectorAll(`video[data-user-id="${toUserId}"]`)
-            : document.querySelectorAll(`video[data-user-id]`);
+            ? document.querySelectorAll(`.video-container[data-user-id="${toUserId}"]`)
+            : document.querySelectorAll(`.video-container[data-user-id]`);
 
         videoElements.forEach((element) => {
             if (element) {
-                (element as HTMLVideoElement).srcObject = null;
-                element.removeAttribute('data-user-id');
+                element.remove();
             }
         });
 
@@ -83,12 +81,6 @@ async function onClickCallButtonHandler(element: HTMLButtonElement, toUserId: st
             alert('Call errors:\n' + errorMessages);
         }
 
-        if (result.remoteStreams.size > 0) {
-            console.log('Successfully connected to users:', Array.from(result.remoteStreams.keys()));
-            remoteVideoElement.srcObject = result.remoteStream;
-            remoteVideoElement.setAttribute('data-user-id', toUserId);
-        }
-
         if (element) {
             element.classList.remove('btn-primary');
             element.classList.add('btn-danger');
@@ -110,7 +102,13 @@ async function onClickCallButtonHandler(element: HTMLButtonElement, toUserId: st
 const socket = connectSocketIO((userId) => {
     console.log('Socket connected with userId:', userId);
     pc.userId = userId;
-    // Update the RTCUserConnectionClient's userId if needed
+    const element = document.querySelector('#local-video-container');
+    element?.setAttribute('data-user-id', userId);
+    const labelElement = document.querySelector('.video-label');
+    if (labelElement) {
+        labelElement.setAttribute('data-user-id', userId);
+        labelElement.textContent = userId;
+    }
 });
 
 socket.on('user-connected', (userId) => {
@@ -175,11 +173,7 @@ pc.onUserDisconnected((userId: string, userLogout: boolean) => {
     console.log('User disconnected:', userId);
 
     // Clean up video elements for disconnected user
-    const videoElement = document.querySelector(`video[data-user-id="${userId}"]`);
-    if (videoElement) {
-        (videoElement as HTMLVideoElement).srcObject = null;
-        (videoElement as HTMLVideoElement)?.remove();
-    }
+    removeRemoteVideoElement(userId);
 
     const element = document.querySelector(`button[data-user-id="${userId}"]`) as HTMLButtonElement;
     if (userLogout) {

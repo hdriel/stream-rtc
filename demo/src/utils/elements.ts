@@ -3,9 +3,6 @@ import type { Offer } from '../source-code';
 export const localVideoQuerySelector = '#local-video';
 export const localVideoElement = document.querySelector(localVideoQuerySelector) as HTMLVideoElement;
 
-export const remoteVideoQuerySelector = '#remote-video';
-export const remoteVideoElement = document.querySelector(remoteVideoQuerySelector) as HTMLVideoElement;
-
 const actionsElement = document.querySelector('#actions') as HTMLDivElement;
 const videosElement = document.querySelector('#videos') as HTMLVideoElement;
 export const callButtonElement = document.querySelector('#call') as HTMLVideoElement;
@@ -20,18 +17,46 @@ export function scenario(text: string) {
 
 export function addRemoteVideoElement(userId: string, remoteStream: MediaStream) {
     const newRemoteVideo = document.createElement('video');
-    newRemoteVideo.className = 'video-player remote-video';
+    newRemoteVideo.className = 'video-player remote-video labeled';
     newRemoteVideo.autoplay = true;
     newRemoteVideo.playsInline = true;
     newRemoteVideo.setAttribute('data-user-id', userId);
     newRemoteVideo.srcObject = remoteStream;
 
-    videosElement.appendChild(newRemoteVideo);
+    const newRemoteVideoWrapper = document.createElement('div');
+    newRemoteVideoWrapper.style.display = 'block';
+    newRemoteVideoWrapper.className = 'video-container';
+    newRemoteVideoWrapper.setAttribute('data-user-id', userId);
+    newRemoteVideoWrapper.appendChild(newRemoteVideo);
+
+    const label = document.createElement('div');
+    label.className = 'video-label';
+    label.textContent = `👤 ${userId}`;
+    label.style.cssText = `
+            text-align: center;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        `;
+    newRemoteVideoWrapper.appendChild(label);
+
+    videosElement.appendChild(newRemoteVideoWrapper);
+}
+
+export function removeRemoteVideoElement(userId: string) {
+    document.querySelector(`.video-container[data-user-id="${userId}"]`)?.remove();
 }
 
 export function addAnswerElement(offer: Offer, cb: () => void) {
     const newOfferEl = document.createElement('div');
-    newOfferEl.innerHTML = `<button class="btn btn-success col-12">Answer ${offer.offererUserId}</button>`;
+    newOfferEl.innerHTML = `<button class="btn btn-success col-12 mb-3">Answer ${offer.offererUserId}</button>`;
     newOfferEl.addEventListener('click', () => {
         cb?.();
         newOfferEl.remove();

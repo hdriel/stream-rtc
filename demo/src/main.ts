@@ -1,5 +1,5 @@
-// import('./script-user-rtc');
-import('./script-room-rtc');
+import('./script-user-rtc');
+// import('./script-room-rtc');
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="container">     
@@ -16,9 +16,12 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <div id="videos">
         <div id="video-wrapper">
           <div id="waiting" class="btn btn-warning">Waiting for answer...</div>
-          <video class="video-player" id="local-video" autoplay playsinline ></video>
+          <div style="display: contents" class="video-container" id="local-video-container">         
+            <video class="video-player" id="local-video" autoplay playsinline ></video>
+            <div class="video-label">test</div>
+          </div>
         </div>
-        <video class="video-player" id="remote-video" autoplay playsinline ></video>
+<!--        <video class="video-player labeled remote-video" autoplay playsinline ></video>-->
       </div>
     </div>
 `;
