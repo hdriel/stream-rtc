@@ -1,8 +1,5 @@
-import('./script1');
-// import('./script2');
-// import('./script3');
-// import('./script4');
-// import('./script5');
+// import('./script-user-rtc');
+import('./script-room-rtc');
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="container">     
