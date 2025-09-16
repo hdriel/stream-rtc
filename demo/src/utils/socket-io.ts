@@ -1,5 +1,5 @@
 import * as io from 'socket.io-client';
-import { getUserName, password, updateToUserId, updateUserName } from './user-details.ts';
+import { getUserName, password, updateUserName } from './user-details.ts';
 
 // @ts-ignore
 const [host, port] = [import.meta.env.VITE_SERVER_HOST, import.meta.env.VITE_SERVER_PORT];
@@ -15,10 +15,10 @@ export const connectSocketIO = (connectedCB?: (userId: string) => void) => {
         updateUserName(userId);
     });
 
-    socket.on('user-connected', (userId) => {
-        console.log('other user connected to RTC app', userId);
-        updateToUserId(userId);
-    });
+    // socket.on('user-connected', (userId) => {
+    //     console.log('other user connected to RTC app', userId);
+    //     updateToUserId(userId);
+    // });
 
     socket.on('user-disconnect', (userId) => {
         console.log('other user disconnected from RTC app', userId);

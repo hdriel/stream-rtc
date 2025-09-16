@@ -7,6 +7,8 @@ import {
     addAnswerElement,
     scenario,
     hangupButtonElement,
+    addCallElement,
+    addRemoteVideoElement,
 } from './utils/elements';
 import { connectSocketIO } from './utils/socket-io';
 import { defaultDeviceChat } from './utils/device-media';
@@ -16,12 +18,52 @@ import { defaultDeviceChat } from './utils/device-media';
 window.RTCUserConnectionClient = RTCUserConnectionClient;
 
 scenario('Multi/User Connections with video elements');
+callButtonElement.remove();
+remoteVideoElement.remove();
+
+async function onClickCallButtonHandler(toUserId: string) {
+    try {
+        if (!toUserId) {
+            alert('Please enter a user ID to call');
+            return;
+        }
+
+        console.log('Starting call to user:', toUserId);
+
+        // Call multiple users (you can modify this to call multiple users)
+        const result = await pc.callUser(toUserId, defaultDeviceChat);
+
+        console.log('Call result:', result);
+
+        if (result.errors.size > 0) {
+            console.error('Call errors:', Array.from(result.errors.entries()));
+            const errorMessages = Array.from(result.errors.entries())
+                .map(([userId, error]) => `${userId}: ${error.message}`)
+                .join('\n');
+            alert('Call errors:\n' + errorMessages);
+        }
+
+        if (result.remoteStreams.size > 0) {
+            console.log('Successfully connected to users:', Array.from(result.remoteStreams.keys()));
+            remoteVideoElement.srcObject = result.remoteStream;
+            remoteVideoElement.setAttribute('data-user-id', toUserId);
+        }
+    } catch (error) {
+        console.error('Failed to start call:', error);
+        alert('Failed to start call: ' + (error as Error).message);
+    }
+}
 
 // Initialize socket connection first
 const socket = connectSocketIO((userId) => {
     console.log('Socket connected with userId:', userId);
     pc.userId = userId;
     // Update the RTCUserConnectionClient's userId if needed
+});
+
+socket.on('user-connected', (userId) => {
+    console.log('User connected:', userId);
+    addCallElement(userId, () => onClickCallButtonHandler(userId));
 });
 
 // Create RTCUserConnectionClient instance
@@ -61,12 +103,7 @@ pc.onOffersReceived((offers: Offer[]) => {
 // Handle remote stream added
 pc.onRemoteStreamAdded((stream: MediaStream, userId: string) => {
     console.log('Remote stream added for user:', userId);
-
-    // If using multiple video elements, you might want to handle this differently
-    if (remoteVideoElement) {
-        remoteVideoElement.srcObject = stream;
-        remoteVideoElement.setAttribute('data-user-id', userId);
-    }
+    addRemoteVideoElement(userId, stream);
 });
 
 // Handle user disconnection
@@ -74,46 +111,9 @@ pc.onUserDisconnected((userId: string) => {
     console.log('User disconnected:', userId);
 
     // Clean up video elements for disconnected user
-    const videoElements = document.querySelectorAll(`[data-user-id="${userId}"]`);
-    videoElements.forEach((element) => {
-        (element as HTMLVideoElement).srcObject = null;
-        element.removeAttribute('data-user-id');
-    });
-});
-
-// Handle call button click
-callButtonElement?.addEventListener('click', async () => {
-    try {
-        const toUserId = getToUserId();
-        if (!toUserId) {
-            alert('Please enter a user ID to call');
-            return;
-        }
-
-        console.log('Starting call to user:', toUserId);
-
-        // Call multiple users (you can modify this to call multiple users)
-        const result = await pc.callUser(toUserId, defaultDeviceChat);
-
-        console.log('Call result:', result);
-
-        if (result.errors.size > 0) {
-            console.error('Call errors:', Array.from(result.errors.entries()));
-            const errorMessages = Array.from(result.errors.entries())
-                .map(([userId, error]) => `${userId}: ${error.message}`)
-                .join('\n');
-            alert('Call errors:\n' + errorMessages);
-        }
-
-        if (result.remoteStreams.size > 0) {
-            console.log('Successfully connected to users:', Array.from(result.remoteStreams.keys()));
-            remoteVideoElement.srcObject = result.remoteStream;
-            remoteVideoElement.setAttribute('data-user-id', toUserId);
-        }
-    } catch (error) {
-        console.error('Failed to start call:', error);
-        alert('Failed to start call: ' + (error as Error).message);
-    }
+    const videoElement = document.querySelector(`video[data-user-id="${userId}"]`);
+    (videoElement as HTMLVideoElement).srcObject = null;
+    videoElement?.removeAttribute('data-user-id');
 });
 
 // Handle hangup button click
@@ -131,13 +131,13 @@ hangupButtonElement?.addEventListener('click', async () => {
 
         // Clear video elements
         if (localVideoElement) localVideoElement.srcObject = null;
-        if (remoteVideoElement) remoteVideoElement.srcObject = null;
-
         // Clear any video elements with user IDs
-        const videoElements = document.querySelectorAll('[data-user-id]');
+        const videoElements = document.querySelectorAll('video[data-user-id]');
         videoElements.forEach((element) => {
-            (element as HTMLVideoElement).srcObject = null;
-            element.removeAttribute('data-user-id');
+            if (element) {
+                (element as HTMLVideoElement).srcObject = null;
+                element.removeAttribute('data-user-id');
+            }
         });
     } catch (error) {
         console.error('Failed to hangup:', error);

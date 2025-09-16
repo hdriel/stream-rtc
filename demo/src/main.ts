@@ -10,7 +10,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <button id="join-room" class="btn btn-primary col-1" hidden>Join</button>
       
       
-      <div class="row mb-3 mt-3 justify-content-md-center">
+      <div id="actions" class="row mb-3 mt-3 justify-content-md-center">
         <div id="user-name"></div>
         <button id="call" class="btn btn-primary col-1">Call!</button>
         <button id="hangup" class="col-1" class="btn btn-primary">Hangup</button>
