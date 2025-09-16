@@ -1,5 +1,5 @@
-import('./script-user-rtc');
-// import('./script-room-rtc');
+// import('./script-user-rtc');
+import('./script-room-rtc');
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="container">     
@@ -11,7 +11,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <div id="user-name"></div>
         <div id="answer" class="col-12"></div>      
         <button id="hangup" class="btn btn-danger col-1">Hangup All</button>
-        <button id="call" class="btn btn-primary col-1">Call!</button> 
+<!--        <button id="call" class="btn btn-primary col-1">Call!</button> -->
       </div>
       <div id="videos">
         <div id="video-wrapper">
@@ -21,7 +21,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
             <div class="video-label me">test</div>
           </div>
         </div>
-<!--        <video class="video-player labeled remote-video" autoplay playsinline ></video>-->
       </div>
     </div>
 `;

@@ -1,7 +1,7 @@
-// RTCRoomClient.ts - מערכת חדרים עם WebRTC
+// RTCRoomClient.ts - Room-based WebRTC system
 import type { Socket } from 'socket.io-client';
 import { RTCPeerConnectionError, type SocketEventType } from './decs.ts';
-import { PEER_CONFIGURATION, SOCKET_EVENTS } from './consts.ts';
+import { PEER_CONFIGURATION } from './consts.ts';
 
 interface RoomInfo {
     roomId: string;
@@ -18,20 +18,21 @@ interface PeerConnectionInfo {
     isConnected: boolean;
 }
 
-export class RTCRoomClient {
+export class RTCRoomConnectionClient {
     private readonly socket: Socket;
     public localStream: MediaStream | null = null;
     private readonly peerConnections: Map<string, PeerConnectionInfo> = new Map();
     private currentRoom: RoomInfo | null = null;
 
     private readonly DEFAULT_CONSTRAINTS: MediaStreamConstraints = { video: true, audio: true };
-    // @ts-ignore
-    private readonly socketEventsMapper: SocketEventType;
+    // private readonly socketEventsMapper: SocketEventType;
     private readonly peerConfiguration: RTCConfiguration;
     private readonly localVideoElement?: HTMLVideoElement;
     private readonly localVideoQuerySelector?: string;
-    private readonly remoteVideoElements?: HTMLVideoElement[];
-    private readonly remoteVideoQuerySelector?: string;
+    // private readonly remoteVideoElements?: HTMLVideoElement[];
+    // private readonly remoteVideoQuerySelector?: string;
+    private readonly videosContainer?: HTMLElement;
+    private readonly videosContainerQuerySelector?: string;
 
     // Event callbacks
     private readonly roomJoinedCallBacks: Set<(roomInfo: RoomInfo) => void>;
@@ -53,6 +54,8 @@ export class RTCRoomClient {
             localVideoQuerySelector?: string;
             remoteVideoElement?: HTMLVideoElement | HTMLVideoElement[];
             remoteVideoElementsQuerySelector?: string;
+            videosContainer?: HTMLElement;
+            videosContainerQuerySelector?: string;
         },
         options: {
             debugMode?: boolean;
@@ -65,19 +68,11 @@ export class RTCRoomClient {
         this.localVideoElement = elements.localVideoElement;
         this.localVideoQuerySelector = elements.localVideoQuerySelector;
 
-        // טיפול ב-remote video elements
-        if (Array.isArray(elements.remoteVideoElement)) {
-            this.remoteVideoElements = elements.remoteVideoElement;
-        } else if (elements.remoteVideoElement) {
-            this.remoteVideoElements = [elements.remoteVideoElement];
-        } else {
-            this.remoteVideoElements = [];
-        }
-
-        this.remoteVideoQuerySelector = elements.remoteVideoElementsQuerySelector;
+        // Handle remote video elements
+        this.videosContainer = elements.videosContainer;
+        this.videosContainerQuerySelector = elements.videosContainerQuerySelector || '#videos';
 
         this.debugMode = options.debugMode ?? false;
-        this.socketEventsMapper = options.socketEventsMapper || SOCKET_EVENTS;
         this.peerConfiguration = options.peerConfiguration || PEER_CONFIGURATION;
 
         this.roomJoinedCallBacks = new Set();
@@ -96,7 +91,7 @@ export class RTCRoomClient {
         console.debug(`[RoomClient-${this.userId}]`, ...args);
     }
 
-    // יצירת חדר חדש
+    // Create new room
     public async createRoom(
         roomName: string,
         options: {
@@ -113,10 +108,10 @@ export class RTCRoomClient {
         try {
             this.debug('Creating room:', roomName);
 
-            // קבלת מדיה לפני יצירת החדר
+            // Get media before creating room
             await this.initializeLocalStream(options.constraints);
 
-            // שליחת בקשה ליצירת חדר
+            // Send room creation request
             const roomData = await this.socket.emitWithAck('createRoom', {
                 roomName,
                 roomId: options.roomId,
@@ -136,7 +131,7 @@ export class RTCRoomClient {
             this.currentRoom = roomInfo;
             this.debug('Room created successfully:', roomInfo);
 
-            // הפעלת callbacks
+            // Trigger callbacks
             this.triggerRoomJoined(roomInfo);
 
             return roomInfo;
@@ -147,7 +142,7 @@ export class RTCRoomClient {
         }
     }
 
-    // הצטרפות לחדר קיים
+    // Join existing room
     public async joinRoom(roomId: string, constraints?: MediaStreamConstraints): Promise<RoomInfo> {
         if (this.currentRoom) {
             throw new Error(`Already in room ${this.currentRoom.roomId}. Leave current room first.`);
@@ -156,10 +151,10 @@ export class RTCRoomClient {
         try {
             this.debug('Joining room:', roomId);
 
-            // קבלת מדיה לפני הצטרפות לחדר
+            // Get media before joining room
             await this.initializeLocalStream(constraints);
 
-            // שליחת בקשה להצטרפות
+            // Send join request
             const roomData = await this.socket.emitWithAck('joinRoom', {
                 roomId,
                 userId: this.userId,
@@ -176,10 +171,10 @@ export class RTCRoomClient {
             this.currentRoom = roomInfo;
             this.debug('Joined room successfully:', roomInfo);
 
-            // יצירת קשרים עם משתתפים קיימים
+            // Connect to existing participants
             await this.connectToExistingParticipants(roomData.participants || []);
 
-            // הפעלת callbacks
+            // Trigger callbacks
             this.triggerRoomJoined(roomInfo);
 
             return roomInfo;
@@ -190,7 +185,7 @@ export class RTCRoomClient {
         }
     }
 
-    // עזיבת חדר נוכחי
+    // Leave current room
     public async leaveRoom(): Promise<void> {
         if (!this.currentRoom) {
             this.debug('Not in any room');
@@ -202,26 +197,26 @@ export class RTCRoomClient {
         try {
             this.debug('Leaving room:', roomId);
 
-            // ניתוק כל הקשרים
+            // Disconnect all peers
             this.disconnectAllPeers();
 
-            // הודעה לשרת על עזיבת החדר
+            // Notify server about leaving
             await this.socket.emitWithAck('leaveRoom', {
                 roomId,
                 userId: this.userId,
             });
 
-            // ניקוי מצב מקומי
+            // Clear local state
             const leftRoomId = this.currentRoom.roomId;
             this.currentRoom = null;
 
-            // ניקוי stream מקומי
+            // Stop local stream
             if (this.localStream) {
                 this.localStream.getTracks().forEach((track) => track.stop());
                 this.localStream = null;
             }
 
-            // ניקוי video elements
+            // Clear video elements
             this.clearVideoElements();
 
             this.debug('Left room successfully:', leftRoomId);
@@ -233,7 +228,7 @@ export class RTCRoomClient {
         }
     }
 
-    // קבלת רשימת חדרים זמינים
+    // Get available rooms
     public async getAvailableRooms(): Promise<RoomInfo[]> {
         try {
             const rooms = await this.socket.emitWithAck('getAvailableRooms');
@@ -246,10 +241,10 @@ export class RTCRoomClient {
         }
     }
 
-    // אתחול stream מקומי
+    // Initialize local stream
     private async initializeLocalStream(constraints?: MediaStreamConstraints): Promise<MediaStream> {
         if (this.localStream) {
-            return this.localStream; // כבר יש stream
+            return this.localStream; // Already have stream
         }
 
         try {
@@ -262,11 +257,11 @@ export class RTCRoomClient {
             return stream;
         } catch (error) {
             this.debug('Failed to get user media:', error);
-            throw new RTCPeerConnectionError('Failed to get user media' + error);
+            throw new RTCPeerConnectionError('Failed to get user media: ' + error);
         }
     }
 
-    // התחברות למשתתפים קיימים בחדר
+    // Connect to existing participants in room
     private async connectToExistingParticipants(participants: string[]): Promise<void> {
         const otherParticipants = participants.filter((id) => id !== this.userId);
 
@@ -284,7 +279,7 @@ export class RTCRoomClient {
         await Promise.allSettled(connectionPromises);
     }
 
-    // יצירת offer connection למשתתף
+    // Create offer connection to participant
     private async createOfferConnection(userId: string): Promise<MediaStream> {
         if (this.peerConnections.has(userId)) {
             this.debug(`Connection with user ${userId} already exists`);
@@ -303,16 +298,18 @@ export class RTCRoomClient {
 
         this.peerConnections.set(userId, peerInfo);
         this.setupPeerConnectionHandlers(userId, peerConnection);
-        this.attachRemoteStreamToVideo(remoteStream, userId);
 
-        // הוספת local tracks
+        // Create video element immediately when creating connection
+        this.createRemoteVideoElement(userId, remoteStream);
+
+        // Add local tracks
         if (this.localStream) {
             this.localStream.getTracks().forEach((track) => {
                 peerConnection.addTrack(track, this.localStream as MediaStream);
             });
         }
 
-        // יצירת offer
+        // Create offer
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
@@ -327,7 +324,7 @@ export class RTCRoomClient {
         return remoteStream;
     }
 
-    // מענה ל-offer מתוך חדר
+    // Answer room offer
     private async answerRoomOffer(offerData: {
         offer: RTCSessionDescriptionInit;
         offererUserId: string;
@@ -358,19 +355,21 @@ export class RTCRoomClient {
 
             this.peerConnections.set(offererUserId, peerInfo);
             this.setupPeerConnectionHandlers(offererUserId, peerConnection);
-            this.attachRemoteStreamToVideo(remoteStream, offererUserId);
 
-            // הוספת local tracks
+            // Create video element immediately when answering offer
+            this.createRemoteVideoElement(offererUserId, remoteStream);
+
+            // Add local tracks
             if (this.localStream) {
                 this.localStream.getTracks().forEach((track) => {
                     peerConnection.addTrack(track, this.localStream as MediaStream);
                 });
             }
 
-            // הגדרת remote description
+            // Set remote description
             await peerConnection.setRemoteDescription(offer);
 
-            // יצירת answer
+            // Create answer
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
 
@@ -387,7 +386,7 @@ export class RTCRoomClient {
         }
     }
 
-    // התקנת handlers ל-peer connection
+    // Setup peer connection event handlers
     private setupPeerConnectionHandlers(userId: string, peerConnection: RTCPeerConnection) {
         peerConnection.addEventListener('icecandidate', (event) => {
             if (event.candidate && this.currentRoom) {
@@ -408,6 +407,9 @@ export class RTCRoomClient {
                 trackEvent.streams[0]?.getTracks().forEach((track) => {
                     peerInfo.remoteStream.addTrack(track);
                 });
+
+                // Update video element with new tracks
+                this.updateRemoteVideoElement(userId, peerInfo.remoteStream);
             }
         });
 
@@ -421,8 +423,10 @@ export class RTCRoomClient {
                 peerInfo.isConnected = state === 'connected';
 
                 if (state === 'connected' && !wasConnected) {
+                    this.debug(`Successfully connected to user ${userId}`);
                     this.triggerRemoteStreamAdded(peerInfo.remoteStream, userId);
                 } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                    this.debug(`Connection with user ${userId} ended: ${state}`);
                     this.handleParticipantDisconnected(userId);
                 }
             }
@@ -433,7 +437,7 @@ export class RTCRoomClient {
         });
     }
 
-    // הצמדת stream מקומי לוידאו element
+    // Attach local stream to video element
     private attachLocalStream(stream: MediaStream) {
         if (this.localVideoElement) {
             this.localVideoElement.srcObject = stream;
@@ -447,26 +451,71 @@ export class RTCRoomClient {
         }
     }
 
-    // הצמדת remote stream לוידאו element
-    private attachRemoteStreamToVideo(stream: MediaStream, userId: string) {
-        const peerIndex = Array.from(this.peerConnections.keys()).indexOf(userId);
+    // Create remote video element dynamically
+    private createRemoteVideoElement(userId: string, stream: MediaStream) {
+        // Check if element already exists
+        const existingElement = document.querySelector(`[data-user-id="${userId}"]`);
+        if (existingElement) {
+            this.debug(`Video element for user ${userId} already exists`);
+            return;
+        }
 
-        if (this.remoteVideoElements && this.remoteVideoElements[peerIndex]) {
-            this.remoteVideoElements[peerIndex].setAttribute('data-user-id', userId);
-            this.remoteVideoElements[peerIndex].srcObject = stream;
-        } else if (this.remoteVideoQuerySelector) {
-            const elements = document.querySelectorAll(this.remoteVideoQuerySelector);
-            const videoElement = elements[peerIndex] as HTMLVideoElement;
-            if (videoElement) {
-                videoElement.setAttribute('data-user-id', userId);
-                videoElement.srcObject = stream;
-            } else {
-                this.debug(`No available video element for user ${userId} at index ${peerIndex}`);
-            }
+        // Get container
+        let container = this.videosContainer;
+        if (!container && this.videosContainerQuerySelector) {
+            container = document.querySelector(this.videosContainerQuerySelector) as HTMLElement;
+        }
+
+        if (!container) {
+            console.warn('No videos container found for remote video');
+            return;
+        }
+
+        // Create video container
+        const videoContainer = document.createElement('div');
+        videoContainer.className = 'video-container';
+        videoContainer.id = `remote-video-${userId}`;
+        videoContainer.setAttribute('data-user-id', userId);
+
+        // Create video element
+        const videoElement = document.createElement('video');
+        videoElement.className = 'video-player';
+        videoElement.autoplay = true;
+        videoElement.playsInline = true;
+        videoElement.srcObject = stream;
+
+        // Create label
+        const labelElement = document.createElement('div');
+        labelElement.className = 'video-label';
+        labelElement.textContent = userId;
+
+        // Assemble elements
+        videoContainer.appendChild(videoElement);
+        videoContainer.appendChild(labelElement);
+        container.appendChild(videoContainer);
+
+        this.debug(`Created video element for user ${userId}`);
+    }
+
+    // Update remote video element with new stream
+    private updateRemoteVideoElement(userId: string, stream: MediaStream) {
+        const videoElement = document.querySelector(`#remote-video-${userId} video`) as HTMLVideoElement;
+        if (videoElement) {
+            videoElement.srcObject = stream;
+            this.debug(`Updated video element for user ${userId}`);
         }
     }
 
-    // ניקוי video elements
+    // Remove remote video element
+    private removeRemoteVideoElement(userId: string) {
+        const videoContainer = document.querySelector(`#remote-video-${userId}`);
+        if (videoContainer) {
+            videoContainer.remove();
+            this.debug(`Removed video element for user ${userId}`);
+        }
+    }
+
+    // Clear all video elements
     private clearVideoElements() {
         if (this.localVideoElement) {
             this.localVideoElement.srcObject = null;
@@ -479,39 +528,28 @@ export class RTCRoomClient {
             }
         }
 
-        // ניקוי remote video elements
-        if (this.remoteVideoElements) {
-            this.remoteVideoElements.forEach((el) => {
-                if (el) {
-                    el.srcObject = null;
-                    el.removeAttribute('data-user-id');
-                }
-            });
-        }
-
-        if (this.remoteVideoQuerySelector) {
-            const elements = document.querySelectorAll(this.remoteVideoQuerySelector);
-            elements.forEach((el) => {
-                if (el) {
-                    (el as HTMLVideoElement).srcObject = null;
-                    el.removeAttribute('data-user-id');
-                }
-            });
-        }
+        // Remove all remote video elements
+        const remoteVideoContainers = document.querySelectorAll(
+            '.video-container[data-user-id]:not([data-user-id="' + this.userId + '"])'
+        );
+        remoteVideoContainers.forEach((container) => {
+            container.remove();
+        });
     }
 
-    // ניתוק כל ה-peers
+    // Disconnect all peers
     private disconnectAllPeers() {
         this.debug('Disconnecting all peers');
 
-        for (const [_userId, peerInfo] of this.peerConnections) {
+        for (const [userId, peerInfo] of this.peerConnections) {
             peerInfo.peerConnection.close();
+            this.removeRemoteVideoElement(userId);
         }
 
         this.peerConnections.clear();
     }
 
-    // טיפול בהתנתקות משתתף
+    // Handle participant disconnected
     private handleParticipantDisconnected(userId: string) {
         this.debug(`Participant ${userId} disconnected`);
 
@@ -519,15 +557,9 @@ export class RTCRoomClient {
         if (peerInfo) {
             peerInfo.peerConnection.close();
             this.peerConnections.delete(userId);
+            this.removeRemoteVideoElement(userId);
 
-            // ניקוי video element
-            const videoElement = document.querySelector(`[data-user-id="${userId}"]`) as HTMLVideoElement;
-            if (videoElement) {
-                videoElement.srcObject = null;
-                videoElement.removeAttribute('data-user-id');
-            }
-
-            // עדכון רשימת משתתפים
+            // Update room participants list
             if (this.currentRoom) {
                 this.currentRoom.participants = this.currentRoom.participants.filter((id) => id !== userId);
             }
@@ -536,7 +568,7 @@ export class RTCRoomClient {
         }
     }
 
-    // טיפול בשגיאות
+    // Error handling
     private handleError(error: any, context?: string) {
         this.debug('Error occurred:', error, context ? `in ${context}` : '');
         for (const cb of this.errorCallBacks) {
@@ -548,7 +580,7 @@ export class RTCRoomClient {
         }
     }
 
-    // הפעלת callbacks
+    // Callback triggers
     private triggerRoomJoined(roomInfo: RoomInfo) {
         for (const cb of this.roomJoinedCallBacks) {
             try {
@@ -599,7 +631,7 @@ export class RTCRoomClient {
         }
     }
 
-    // מידע ופונקציות עזר
+    // Public utility methods
     public getCurrentRoom(): RoomInfo | null {
         return this.currentRoom;
     }
@@ -626,7 +658,7 @@ export class RTCRoomClient {
         return this.peerConnections.get(userId)?.remoteStream || null;
     }
 
-    // Event listeners
+    // Event listener methods
     public onRoomJoined(cb: (roomInfo: RoomInfo) => void) {
         this.roomJoinedCallBacks.add(cb);
     }
@@ -683,15 +715,15 @@ export class RTCRoomClient {
         this.roomListUpdatedCallBacks.delete(cb);
     }
 
-    // אתחול event listeners
+    // Initialize socket event handlers
     private init() {
-        // מענה ל-offer בחדר
+        // Handle room offer
         this.socket.on('roomOffer', async (offerData) => {
             this.debug('Received room offer:', offerData);
             await this.answerRoomOffer(offerData);
         });
 
-        // קבלת answer לחדר
+        // Handle room answer
         this.socket.on(
             'roomAnswer',
             async (answerData: { answer: RTCSessionDescriptionInit; answererUserId: string; roomId: string }) => {
@@ -703,7 +735,7 @@ export class RTCRoomClient {
             }
         );
 
-        // קבלת ICE candidates
+        // Handle ICE candidates
         this.socket.on(
             'roomIceCandidate',
             async (candidateData: { candidate: RTCIceCandidate; senderUserId: string; roomId: string }) => {
@@ -715,17 +747,17 @@ export class RTCRoomClient {
             }
         );
 
-        // משתתף חדש הצטרף לחדר
+        // Handle new participant joined
         this.socket.on('userJoinedRoom', async (data: { userId: string; roomId: string }) => {
             this.debug('User joined room:', data);
 
             if (this.currentRoom?.roomId === data.roomId && data.userId !== this.userId) {
-                // עדכון רשימת משתתפים
+                // Update participants list
                 if (!this.currentRoom.participants.includes(data.userId)) {
                     this.currentRoom.participants.push(data.userId);
                 }
 
-                // יצירת חיבור עם המשתתף החדש (רק אם אנחנו לא המצטרף החדש)
+                // Create connection with new participant (only if we don't already have one)
                 if (!this.peerConnections.has(data.userId)) {
                     try {
                         await this.createOfferConnection(data.userId);
@@ -738,7 +770,7 @@ export class RTCRoomClient {
             }
         });
 
-        // משתתף עזב את החדר
+        // Handle participant left
         this.socket.on('userLeftRoom', (data: { userId: string; roomId: string }) => {
             this.debug('User left room:', data);
 
@@ -747,7 +779,7 @@ export class RTCRoomClient {
             }
         });
 
-        // החדר נסגר
+        // Handle room closed
         this.socket.on('roomClosed', (data: { roomId: string; reason?: string }) => {
             this.debug('Room closed:', data);
 
@@ -758,7 +790,7 @@ export class RTCRoomClient {
             }
         });
 
-        // עדכון רשימת חדרים זמינים
+        // Handle room list updates
         this.socket.on('availableRoomsUpdated', (rooms: RoomInfo[]) => {
             this.debug('Available rooms updated:', rooms);
             for (const cb of this.roomListUpdatedCallBacks) {
@@ -766,11 +798,11 @@ export class RTCRoomClient {
             }
         });
 
-        // טיפול בהתנתקות מהשרת
+        // Handle server disconnection
         this.socket.on('disconnect', () => {
             this.debug('Disconnected from server');
             if (this.currentRoom) {
-                // ניקוי מצב מקומי בלבד
+                // Clean up local state only
                 this.disconnectAllPeers();
                 this.currentRoom = null;
                 if (this.localStream) {

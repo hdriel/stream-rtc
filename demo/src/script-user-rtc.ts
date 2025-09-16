@@ -2,7 +2,6 @@ import { RTCUserConnectionClient, type Offer } from './source-code';
 import { getUserName } from './utils/user-details';
 import {
     localVideoElement,
-    callButtonElement,
     addAnswerElement,
     scenario,
     hangupButtonElement,
@@ -17,7 +16,6 @@ import { defaultDeviceChat } from './utils/device-media';
 window.RTCUserConnectionClient = RTCUserConnectionClient;
 
 scenario('Multi/User Connections with video elements');
-callButtonElement?.remove();
 
 async function onClickHangoutButtonHandler(element?: HTMLButtonElement, toUserId?: string) {
     try {

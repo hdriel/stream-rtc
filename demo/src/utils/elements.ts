@@ -5,7 +5,6 @@ export const localVideoElement = document.querySelector(localVideoQuerySelector)
 
 const actionsElement = document.querySelector('#actions') as HTMLDivElement;
 const videosElement = document.querySelector('#videos') as HTMLVideoElement;
-export const callButtonElement = document.querySelector('#call') as HTMLVideoElement;
 export const hangupButtonElement = document.querySelector('#hangup') as HTMLVideoElement;
 const answerEl = document.querySelector('#answer');
 const title = document.querySelector('#use-case') as Element;
