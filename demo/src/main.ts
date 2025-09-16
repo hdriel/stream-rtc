@@ -18,7 +18,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
           <div id="waiting" class="btn btn-warning">Waiting for answer...</div>
           <div style="display: contents" class="video-container" id="local-video-container">         
             <video class="video-player" id="local-video" autoplay playsinline ></video>
-            <div class="video-label">test</div>
+            <div class="video-label me">test</div>
           </div>
         </div>
 <!--        <video class="video-player labeled remote-video" autoplay playsinline ></video>-->

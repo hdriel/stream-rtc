@@ -30,9 +30,7 @@
 
 }
 
-video.labeled::after {
-    content: "👤 User: " attr(data-user-id);
-    display: block;
+.video-label {
     text-align: center;
     margin-top: 10px;
     padding: 8px 16px;
@@ -44,5 +42,7 @@ video.labeled::after {
     width: fit-content;
     margin-left: auto;
     margin-right: auto;
-    position: relative;
+}
+.video-label.me {
+    background-color: #875f00;
 }
