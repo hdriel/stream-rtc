@@ -20,7 +20,6 @@ scenario('Multi/User Connections with video elements');
 // Initialize socket connection first
 const socket = connectSocketIO((userId) => {
     console.log('Socket connected with userId:', userId);
-    debugger;
     pc.userId = userId;
     // Update the RTCUserConnectionClient's userId if needed
 });
@@ -44,7 +43,6 @@ pc.onOffersReceived((offers: Offer[]) => {
         // Add answer button for each offer
         addAnswerElement(offer, async () => {
             try {
-                debugger;
                 console.log('Answering offer from:', offer.offererUserId);
                 const result = await pc.answerOffers([offer], defaultDeviceChat);
                 console.log('Answer result:', result);
@@ -86,7 +84,6 @@ pc.onUserDisconnected((userId: string) => {
 // Handle call button click
 callButtonElement?.addEventListener('click', async () => {
     try {
-        debugger;
         const toUserId = getToUserId();
         if (!toUserId) {
             alert('Please enter a user ID to call');

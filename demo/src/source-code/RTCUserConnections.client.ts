@@ -223,7 +223,7 @@ export class RTCUserConnectionClient {
         // ICE candidate handling with correct didIOffer determination
         peerConnection.addEventListener('icecandidate', (event) => {
             if (event.candidate) {
-                this.debug(`Sending ICE candidate for user ${userId}`);
+                this.debug(`Sending ICE candidate for user ${userId}  from: ${this._userId}`);
 
                 // Get the correct didIOffer value from our stored peer info
                 const peerInfo = this.peerConnections.get(userId);
