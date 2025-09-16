@@ -13,16 +13,19 @@ interface PeerConnectionInfo {
 export class RTCUserConnectionClient {
     private readonly socket: Socket;
     public localStream: MediaStream | null = null;
-    private readonly peerConnections: Map<string, PeerConnectionInfo> = new Map();
-    private readonly DEFAULT_CONSTRAINTS: MediaStreamConstraints = { video: true, audio: true };
-    private readonly socketEventsMapper: SocketEventType;
-    private readonly peerConfiguration: RTCConfiguration;
     private localVideoElement?: HTMLVideoElement;
     private readonly localVideoQuerySelector?: string;
+
+    private readonly peerConnections: Map<string, PeerConnectionInfo> = new Map();
+    private readonly DEFAULT_CONSTRAINTS: MediaStreamConstraints = { video: true, audio: true };
+    private readonly peerConfiguration: RTCConfiguration;
+
     private readonly offerCallBacks: Set<(offers: Offer[]) => void>;
     private readonly errorCallBacks: Set<(error: Error, userId?: string) => void>;
     private readonly remoteStreamAddedCallBacks: Set<(remoteStream: MediaStream, userId: string) => void>;
     private readonly userDisconnectedCallBacks: Set<(userId: string, userLogout: boolean) => void>;
+
+    private readonly socketEventsMapper: SocketEventType;
     private _userId: string;
     private readonly debugMode: boolean;
 
@@ -405,7 +408,6 @@ export class RTCUserConnectionClient {
             this.peerConnections.delete(userId);
             this.localStream = null;
 
-            // ניקוי video element
             const videoElements = document.querySelectorAll(`video[data-user-id="${userId}"]`);
             videoElements.forEach((el) => {
                 if (el) {
