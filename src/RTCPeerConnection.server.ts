@@ -97,6 +97,10 @@ export class RTCPeerConnectionServer {
             }
         );
 
+        this.socket.on(this.socketEventsMapper.cancelOffers, (offerObj: Offer | Offer[]) => {
+            ([] as Offer[]).concat(offerObj).forEach((offer) => this.handleAbortAnswer(offer));
+        });
+
         // Handle room answers specifically
         this.socket.on(
             'roomAnswer',
@@ -256,7 +260,11 @@ export class RTCPeerConnectionServer {
             return;
         }
 
-        const offerToUpdate = RTCPeerConnectionServer.offers.find((o) => o.offererUserId === offerObj.offererUserId);
+        const offerIndexToUpdate = RTCPeerConnectionServer.offers.findIndex(
+            (o) => o.offererUserId === offerObj.offererUserId
+        );
+        const [offerToUpdate] =
+            offerIndexToUpdate >= 0 ? RTCPeerConnectionServer.offers.splice(offerIndexToUpdate, 1) : [];
         if (!offerToUpdate) {
             this.debug('No offer to update found');
             return;
@@ -284,7 +292,32 @@ export class RTCPeerConnectionServer {
         };
 
         this.socket.emit(this.socketEventsMapper.answerResponse, answererOffer);
+
         this.debug('Answer processed and sent');
+    }
+
+    private handleAbortAnswer(offerObj: Offer) {
+        const socketIdToAnswer = RTCPeerConnectionServer.connectedSockets[offerObj.offererUserId];
+        if (!socketIdToAnswer) {
+            this.debug('No matching socket for offerer:', offerObj.offererUserId);
+            return;
+        }
+
+        const offerIndexToUpdate = RTCPeerConnectionServer.offers.findIndex(
+            (o) => o.offererUserId === offerObj.offererUserId
+        );
+
+        if (offerIndexToUpdate === -1) {
+            this.debug('No offer to update found');
+            return;
+        }
+
+        RTCPeerConnectionServer.offers.splice(offerIndexToUpdate, 1);
+
+        this.socket.emit(this.socketEventsMapper.availableOffers, RTCPeerConnectionServer.offers);
+        this.socket.to(socketIdToAnswer).emit(this.socketEventsMapper.availableOffers, RTCPeerConnectionServer.offers);
+
+        this.debug('Abort answer processed and sent');
     }
 
     private handleRoomAnswer(answerData: {
