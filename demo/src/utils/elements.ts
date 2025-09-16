@@ -20,13 +20,12 @@ export function scenario(text: string) {
 
 export function addRemoteVideoElement(userId: string, remoteStream: MediaStream) {
     const newRemoteVideo = document.createElement('video');
-    newRemoteVideo.className = 'video-player';
-    newRemoteVideo.id = 'remote-video';
+    newRemoteVideo.className = 'video-player remote-video';
     newRemoteVideo.autoplay = true;
     newRemoteVideo.playsInline = true;
     newRemoteVideo.setAttribute('data-user-id', userId);
-
     newRemoteVideo.srcObject = remoteStream;
+
     videosElement.appendChild(newRemoteVideo);
 }
 
@@ -40,11 +39,11 @@ export function addAnswerElement(offer: Offer, cb: () => void) {
     answerEl?.appendChild(newOfferEl);
 }
 
-export function addCallElement(userId: string, cb: () => Promise<void>) {
+export function addCallElement(userId: string, cb: (element: HTMLButtonElement) => Promise<void>) {
     const newCallEl = document.createElement('button');
     newCallEl.setAttribute('data-user-id', userId);
     newCallEl.classList.add(...'btn btn-primary col-1'.split(' '));
     newCallEl.innerText = `Call: ${userId}`;
-    newCallEl.addEventListener('click', cb);
+    newCallEl.addEventListener('click', () => cb(newCallEl));
     actionsElement?.appendChild(newCallEl);
 }

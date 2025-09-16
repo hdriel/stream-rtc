@@ -1,5 +1,5 @@
 import { RTCUserConnectionClient, type Offer } from './source-code';
-import { getUserName, getToUserId } from './utils/user-details';
+import { getUserName } from './utils/user-details';
 import {
     localVideoElement,
     remoteVideoElement,
@@ -21,7 +21,48 @@ scenario('Multi/User Connections with video elements');
 callButtonElement.remove();
 remoteVideoElement.remove();
 
-async function onClickCallButtonHandler(toUserId: string) {
+async function onClickHangoutButtonHandler(element?: HTMLButtonElement, toUserId?: string) {
+    try {
+        if (toUserId) {
+            console.log('Disconnecting user:', toUserId);
+            pc.disconnectUser(toUserId);
+        } else {
+            console.log('Disconnecting all users');
+            pc.disconnectAll();
+        }
+
+        // Clear video elements
+        if (localVideoElement) localVideoElement.srcObject = null;
+        // Clear any video elements with user IDs
+        const videoElements = toUserId
+            ? document.querySelectorAll(`video[data-user-id="${toUserId}"]`)
+            : document.querySelectorAll(`video[data-user-id]`);
+
+        videoElements.forEach((element) => {
+            if (element) {
+                (element as HTMLVideoElement).srcObject = null;
+                element.removeAttribute('data-user-id');
+            }
+        });
+
+        if (element) {
+            element.classList.remove('btn-danger');
+            element.classList.add('btn-primary');
+            element.innerText = `Call: ${toUserId}`;
+            const elClone = element.cloneNode(true);
+            element.parentNode?.replaceChild(elClone, element);
+
+            elClone.addEventListener('click', () => {
+                return onClickCallButtonHandler(elClone as HTMLButtonElement, toUserId as string);
+            });
+        }
+    } catch (error) {
+        console.error('Failed to hangup:', error);
+        alert('Failed to hangup: ' + (error as Error).message);
+    }
+}
+
+async function onClickCallButtonHandler(element: HTMLButtonElement, toUserId: string) {
     try {
         if (!toUserId) {
             alert('Please enter a user ID to call');
@@ -32,7 +73,6 @@ async function onClickCallButtonHandler(toUserId: string) {
 
         // Call multiple users (you can modify this to call multiple users)
         const result = await pc.callUser(toUserId, defaultDeviceChat);
-
         console.log('Call result:', result);
 
         if (result.errors.size > 0) {
@@ -47,6 +87,18 @@ async function onClickCallButtonHandler(toUserId: string) {
             console.log('Successfully connected to users:', Array.from(result.remoteStreams.keys()));
             remoteVideoElement.srcObject = result.remoteStream;
             remoteVideoElement.setAttribute('data-user-id', toUserId);
+        }
+
+        if (element) {
+            element.classList.remove('btn-primary');
+            element.classList.add('btn-danger');
+            element.innerText = `Hangup: ${toUserId}`;
+            const elClone = element.cloneNode(true);
+            element.parentNode?.replaceChild(elClone, element);
+
+            elClone.addEventListener('click', () => {
+                return onClickHangoutButtonHandler(elClone as HTMLButtonElement, toUserId as string);
+            });
         }
     } catch (error) {
         console.error('Failed to start call:', error);
@@ -63,7 +115,7 @@ const socket = connectSocketIO((userId) => {
 
 socket.on('user-connected', (userId) => {
     console.log('User connected:', userId);
-    addCallElement(userId, () => onClickCallButtonHandler(userId));
+    addCallElement(userId, (element: HTMLButtonElement) => onClickCallButtonHandler(element, userId));
 });
 
 // Create RTCUserConnectionClient instance
@@ -104,10 +156,22 @@ pc.onOffersReceived((offers: Offer[]) => {
 pc.onRemoteStreamAdded((stream: MediaStream, userId: string) => {
     console.log('Remote stream added for user:', userId);
     addRemoteVideoElement(userId, stream);
+    const element = document.querySelector(`button[data-user-id="${userId}"]`) as HTMLButtonElement;
+    if (element) {
+        element.classList.remove('btn-primary');
+        element.classList.add('btn-danger');
+        element.innerText = `Hangup: ${userId}`;
+        const elClone = element.cloneNode(true);
+        element.parentNode?.replaceChild(elClone, element);
+
+        elClone.addEventListener('click', () => {
+            return onClickHangoutButtonHandler(elClone as HTMLButtonElement, userId as string);
+        });
+    }
 });
 
 // Handle user disconnection
-pc.onUserDisconnected((userId: string) => {
+pc.onUserDisconnected((userId: string, userLogout: boolean) => {
     console.log('User disconnected:', userId);
 
     // Clean up video elements for disconnected user
@@ -116,37 +180,27 @@ pc.onUserDisconnected((userId: string) => {
         (videoElement as HTMLVideoElement).srcObject = null;
         (videoElement as HTMLVideoElement)?.remove();
     }
-    document.querySelector(`button[data-user-id="${userId}"]`)?.remove();
+
+    const element = document.querySelector(`button[data-user-id="${userId}"]`) as HTMLButtonElement;
+    if (userLogout) {
+        element?.remove();
+    } else {
+        if (element) {
+            element.classList.remove('btn-danger');
+            element.classList.add('btn-primary');
+            element.innerText = `Call: ${userId}`;
+            const elClone = element.cloneNode(true);
+            element.parentNode?.replaceChild(elClone, element);
+
+            elClone.addEventListener('click', () => {
+                return onClickCallButtonHandler(elClone as HTMLButtonElement, userId as string);
+            });
+        }
+    }
 });
 
 // Handle hangup button click
-hangupButtonElement?.addEventListener('click', async () => {
-    try {
-        const toUserId = getToUserId();
-
-        if (toUserId) {
-            console.log('Disconnecting user:', toUserId);
-            pc.disconnectUser(toUserId);
-        } else {
-            console.log('Disconnecting all users');
-            pc.disconnectAll();
-        }
-
-        // Clear video elements
-        if (localVideoElement) localVideoElement.srcObject = null;
-        // Clear any video elements with user IDs
-        const videoElements = document.querySelectorAll('video[data-user-id]');
-        videoElements.forEach((element) => {
-            if (element) {
-                (element as HTMLVideoElement).srcObject = null;
-                element.removeAttribute('data-user-id');
-            }
-        });
-    } catch (error) {
-        console.error('Failed to hangup:', error);
-        alert('Failed to hangup: ' + (error as Error).message);
-    }
-});
+hangupButtonElement?.addEventListener('click', async () => onClickHangoutButtonHandler());
 
 // Add some utility functions for debugging
 // @ts-ignore

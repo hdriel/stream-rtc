@@ -22,7 +22,7 @@ export class RTCUserConnectionClient {
     private readonly offerCallBacks: Set<(offers: Offer[]) => void>;
     private readonly errorCallBacks: Set<(error: Error, userId?: string) => void>;
     private readonly remoteStreamAddedCallBacks: Set<(remoteStream: MediaStream, userId: string) => void>;
-    private readonly userDisconnectedCallBacks: Set<(userId: string) => void>;
+    private readonly userDisconnectedCallBacks: Set<(userId: string, userLogout: boolean) => void>;
     private _userId: string;
     private readonly debugMode: boolean;
 
@@ -276,7 +276,7 @@ export class RTCUserConnectionClient {
                     this.triggerRemoteStreamAdded(peerInfo.remoteStream, userId);
                 } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
                     this.debug(`❌ Connection with user ${userId} ended: ${state}`);
-                    this.handleUserDisconnected(userId);
+                    this.handleUserDisconnected(userId, false);
                 } else if (state === 'connecting') {
                     this.debug(`🔄 Connecting to user ${userId}...`);
                 } else if (state === 'new') {
@@ -377,11 +377,13 @@ export class RTCUserConnectionClient {
         }
     }
 
-    private handleUserDisconnected(userId: string) {
+    private handleUserDisconnected(userId: string, userLogout: boolean) {
         this.debug(`User ${userId} disconnected`);
+        this.disconnectUser(userId);
+
         for (const cb of this.userDisconnectedCallBacks) {
             try {
-                cb(userId);
+                cb(userId, userLogout);
             } catch (cbError) {
                 console.error('Error in user disconnected callback:', cbError);
             }
@@ -391,10 +393,12 @@ export class RTCUserConnectionClient {
     // ניהול קשרים
     public disconnectUser(userId: string) {
         const peerInfo = this.peerConnections.get(userId);
+
         if (peerInfo) {
             this.debug(`Disconnecting user ${userId}`);
             peerInfo.peerConnection.close();
             this.peerConnections.delete(userId);
+            this.localStream = null;
 
             // ניקוי video element
             const videoElements = document.querySelectorAll(`video[data-user-id="${userId}"]`);
@@ -402,6 +406,7 @@ export class RTCUserConnectionClient {
                 if (el) {
                     (el as HTMLVideoElement).srcObject = null;
                     el.removeAttribute('data-user-id');
+                    el.remove();
                 }
             });
         }
@@ -421,7 +426,18 @@ export class RTCUserConnectionClient {
             this.localStream = null;
         }
 
-        if (this.localVideoElement) this.localVideoElement.srcObject = null;
+        if (this.localVideoElement) {
+            this.localVideoElement.srcObject = null;
+        }
+
+        const videoElements = document.querySelectorAll<HTMLVideoElement>(`video[data-user-id]`);
+        videoElements.forEach((el) => {
+            if (el && el?.dataset.userId !== this.userId) {
+                (el as HTMLVideoElement).srcObject = null;
+                el.removeAttribute('data-user-id');
+                el.remove();
+            }
+        });
     }
 
     public getConnectedUsers(): string[] {
@@ -477,7 +493,7 @@ export class RTCUserConnectionClient {
         this.remoteStreamAddedCallBacks.delete(cb);
     }
 
-    public onUserDisconnected(cb: (userId: string) => void) {
+    public onUserDisconnected(cb: (userId: string, userLogout: boolean) => void) {
         this.userDisconnectedCallBacks.add(cb);
     }
 
@@ -516,8 +532,7 @@ export class RTCUserConnectionClient {
         // טיפול במשתמשים שמתנתקים
         this.socket.on('userDisconnected', (userId: string) => {
             this.debug('User disconnected:', userId);
-            this.disconnectUser(userId);
-            this.handleUserDisconnected(userId);
+            this.handleUserDisconnected(userId, true);
         });
     }
 }
