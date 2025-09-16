@@ -12,7 +12,6 @@ import {
 } from './utils/elements';
 import { connectSocketIO } from './utils/socket-io';
 import { defaultDeviceChat } from './utils/device-media';
-// import { RTCPeerConnectionClient, type Offer } from 'stream-rtc';
 
 // @ts-ignore
 window.RTCUserConnectionClient = RTCUserConnectionClient;
@@ -30,12 +29,15 @@ async function onClickHangoutButtonHandler(element?: HTMLButtonElement, toUserId
             pc.disconnectAll();
         }
 
-        // Clear video elements
-        if (localVideoElement) localVideoElement.srcObject = null;
-        // Clear any video elements with user IDs
+        if (!toUserId) {
+            // Only clear local video when hanging up ALL calls
+            if (localVideoElement) localVideoElement.srcObject = null;
+        }
+
+        // Clear remote video elements for specific user or all remote users
         const videoElements = toUserId
             ? document.querySelectorAll(`.video-container[data-user-id="${toUserId}"]`)
-            : document.querySelectorAll(`.video-container[data-user-id]`);
+            : document.querySelectorAll(`.video-container[data-user-id]:not([data-user-id="${pc.userId}"])`);
 
         videoElements.forEach((element) => {
             if (element) {
@@ -193,7 +195,6 @@ pc.onUserDisconnected((userId: string, userLogout: boolean) => {
     }
 });
 
-// Handle hangup button click
 hangupButtonElement?.addEventListener('click', async () => onClickHangoutButtonHandler());
 
 // Add some utility functions for debugging
@@ -205,6 +206,15 @@ window.pcDebug = {
     isUserConnected: (userId: string) => pc.isUserConnected(userId),
     disconnectUser: (userId: string) => pc.disconnectUser(userId),
     disconnectAll: () => pc.disconnectAll(),
+    getLocalStream: () => pc.localStream,
+    restoreLocalVideo: () => {
+        // Helper function to restore local video if it gets lost
+        if (pc.localStream && localVideoElement) {
+            localVideoElement.srcObject = pc.localStream;
+            console.log('Local video restored');
+        }
+    },
 };
 
 console.log('Multi-User RTC Client initialized. Debug functions available at window.pcDebug');
+console.log('Use window.pcDebug.restoreLocalVideo() if local video gets lost');

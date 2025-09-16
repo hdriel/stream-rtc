@@ -7,7 +7,7 @@ interface PeerConnectionInfo {
     peerConnection: RTCPeerConnection;
     remoteStream: MediaStream;
     isConnected: boolean;
-    didIOffer: boolean; // NEW: Track who initiated the connection
+    didIOffer: boolean; // Track who initiated the connection
 }
 
 export class RTCUserConnectionClient {
@@ -110,7 +110,6 @@ export class RTCUserConnectionClient {
         };
     }
 
-    // מענה למספר offers
     public async answerOffers(
         offer: Offer | Offer[],
         constraints?: MediaStreamConstraints
@@ -199,15 +198,15 @@ export class RTCUserConnectionClient {
         this.peerConnections.set(userId, peerInfo);
         this.setupPeerConnectionHandlers(userId, peerConnection);
 
-        // הוספת local tracks
+        // Add local tracks
         this.localStream?.getTracks().forEach((track) => {
             peerConnection.addTrack(track, this.localStream as MediaStream);
         });
 
-        // הגדרת remote description
+        // Set remote description
         await peerConnection.setRemoteDescription(offerObj.offer as RTCSessionDescriptionInit);
 
-        // יצירת answer
+        // Create answer
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
 
@@ -217,7 +216,7 @@ export class RTCUserConnectionClient {
         this.debug(`Sending answer to user ${userId}`);
         const offerIceCandidates = await this.socket.emitWithAck(this.socketEventsMapper.newAnswer, offerObj);
 
-        // הוספת ICE candidates
+        // Add ICE candidates
         offerIceCandidates?.forEach((candidate: RTCIceCandidate) => {
             peerConnection.addIceCandidate(candidate);
             this.debug(`Added ICE candidate for user ${userId}`);
@@ -230,7 +229,7 @@ export class RTCUserConnectionClient {
         // ICE candidate handling with correct didIOffer determination
         peerConnection.addEventListener('icecandidate', (event) => {
             if (event.candidate) {
-                this.debug(`Sending ICE candidate for user ${userId}  from: ${this._userId}`);
+                this.debug(`Sending ICE candidate for user ${userId} from: ${this._userId}`);
 
                 // Get the correct didIOffer value from our stored peer info
                 const peerInfo = this.peerConnections.get(userId);
@@ -240,7 +239,7 @@ export class RTCUserConnectionClient {
                     iceCandidate: event.candidate,
                     iceUserId: this._userId,
                     targetUserId: userId,
-                    didIOffer: didIOffer, // Now correctly determined!
+                    didIOffer: didIOffer,
                 });
             }
         });
@@ -398,7 +397,7 @@ export class RTCUserConnectionClient {
         }
     }
 
-    // ניהול קשרים
+    // Connection management - FIXED BUG HERE
     public disconnectUser(userId: string) {
         const peerInfo = this.peerConnections.get(userId);
 
@@ -406,9 +405,9 @@ export class RTCUserConnectionClient {
             this.debug(`Disconnecting user ${userId}`);
             peerInfo.peerConnection.close();
             this.peerConnections.delete(userId);
-            this.localStream = null;
 
-            const videoElements = document.querySelectorAll(`video[data-user-id="${userId}"]`);
+            // Only remove remote video elements, NOT the local video element
+            const videoElements = document.querySelectorAll(`video[data-user-id="${userId}"]:not(#local-video)`);
             videoElements.forEach((el) => {
                 if (el) {
                     (el as HTMLVideoElement).srcObject = null;
@@ -416,6 +415,11 @@ export class RTCUserConnectionClient {
                     el.remove();
                 }
             });
+
+            // IMPORTANT: Keep local video stream attached to local video element
+            if (this.localStream && this.localVideoElement) {
+                this.localVideoElement.srcObject = this.localStream;
+            }
         }
     }
 
@@ -428,6 +432,7 @@ export class RTCUserConnectionClient {
 
         this.peerConnections.clear();
 
+        // Only stop local stream when disconnecting ALL users
         if (this.localStream) {
             this.localStream.getTracks().forEach((track) => track.stop());
             this.localStream = null;
@@ -437,7 +442,8 @@ export class RTCUserConnectionClient {
             this.localVideoElement.srcObject = null;
         }
 
-        const videoElements = document.querySelectorAll<HTMLVideoElement>(`video[data-user-id]`);
+        // Only remove remote video elements, preserve local video element
+        const videoElements = document.querySelectorAll<HTMLVideoElement>(`video[data-user-id]:not(#local-video)`);
         videoElements.forEach((el) => {
             if (el && el?.dataset.userId !== this._userId) {
                 (el as HTMLVideoElement).srcObject = null;
@@ -445,6 +451,19 @@ export class RTCUserConnectionClient {
                 el.remove();
             }
         });
+    }
+
+    // Additional method to properly stop local stream when needed
+    public stopLocalStream() {
+        if (this.localStream) {
+            this.debug('Stopping local stream');
+            this.localStream.getTracks().forEach((track) => track.stop());
+            this.localStream = null;
+
+            if (this.localVideoElement) {
+                this.localVideoElement.srcObject = null;
+            }
+        }
     }
 
     public getConnectedUsers(): string[] {
@@ -469,7 +488,7 @@ export class RTCUserConnectionClient {
         return this.peerConnections.get(userId)?.remoteStream || null;
     }
 
-    // NEW: Get who initiated the connection
+    // Get who initiated the connection
     public didIInitiateConnection(userId: string): boolean | null {
         const peerInfo = this.peerConnections.get(userId);
         return peerInfo ? peerInfo.didIOffer : null;
@@ -536,7 +555,7 @@ export class RTCUserConnectionClient {
             }
         });
 
-        // טיפול במשתמשים שמתנתקים
+        // Handle users disconnecting
         this.socket.on('userDisconnected', (userId: string) => {
             this.debug('User disconnected:', userId);
             this.handleUserDisconnected(userId, true);
