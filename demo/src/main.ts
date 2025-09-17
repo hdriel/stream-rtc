@@ -1,5 +1,5 @@
-// import('./script-user-rtc');
-import('./script-room-rtc');
+import('./script-user-rtc');
+// import('./script-room-rtc');
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="container">     
