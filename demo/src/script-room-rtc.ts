@@ -1,5 +1,5 @@
 import { RTCRoomConnectionClient } from './source-code';
-import { getUserName } from './utils/user-details';
+import { getUserName, userNameEl } from './utils/user-details';
 import { hangupButtonElement, localVideoElement, scenario } from './utils/elements';
 import { connectSocketIO } from './utils/socket-io';
 import { defaultDeviceChat } from './utils/device-media';
@@ -9,6 +9,7 @@ window.RTCRoomConnectionClient = RTCRoomConnectionClient;
 
 scenario('Room Connections with video elements');
 hangupButtonElement?.remove();
+userNameEl?.remove();
 
 interface RoomInfo {
     roomId: string;
@@ -425,33 +426,33 @@ window.joinRoom = async (roomId: string) => {
         console.log('Joining room with constraints:', defaultDeviceChat);
         await pc.joinRoom(roomId, defaultDeviceChat);
 
-        // // Verify local stream after joining
-        // setTimeout(() => {
-        //     console.log('Post-join check:');
-        //     console.log('Local stream:', pc.localStream);
-        //     console.log('Current room participants:', pc.getRoomParticipants());
-        //     console.log('Connected participants:', pc.getConnectedParticipants());
-        //
-        //     if (pc.localStream && localVideoElement && !localVideoElement.srcObject) {
-        //         console.log('Restoring local video after room join');
-        //         localVideoElement.srcObject = pc.localStream;
-        //     }
-        //
-        //     // Check for existing participants and their connection status
-        //     const participants = pc.getRoomParticipants();
-        //     participants.forEach((userId) => {
-        //         if (userId !== getUserName()) {
-        //             const isConnected = pc.isParticipantConnected(userId);
-        //             const stream = pc.getParticipantStream(userId);
-        //             console.log(`Participant ${userId}: Connected=${isConnected}, HasStream=${!!stream}`);
-        //
-        //             if (stream && isConnected) {
-        //                 console.log('Adding existing participant video:', userId);
-        //                 addRemoteVideo(userId, stream);
-        //             }
-        //         }
-        //     });
-        // }, 2000);
+        // Verify local stream after joining
+        setTimeout(() => {
+            console.log('Post-join check:');
+            console.log('Local stream:', pc.localStream);
+            console.log('Current room participants:', pc.getRoomParticipants());
+            console.log('Connected participants:', pc.getConnectedParticipants());
+
+            if (pc.localStream && localVideoElement && !localVideoElement.srcObject) {
+                console.log('Restoring local video after room join');
+                localVideoElement.srcObject = pc.localStream;
+            }
+
+            // Check for existing participants and their connection status
+            const participants = pc.getRoomParticipants();
+            participants.forEach((userId) => {
+                if (userId !== getUserName()) {
+                    const isConnected = pc.isParticipantConnected(userId);
+                    const stream = pc.getParticipantStream(userId);
+                    console.log(`Participant ${userId}: Connected=${isConnected}, HasStream=${!!stream}`);
+
+                    if (stream && isConnected) {
+                        console.log('Adding existing participant video:', userId);
+                        addRemoteVideo(userId, stream);
+                    }
+                }
+            });
+        }, 2000);
     } catch (error) {
         console.error('Failed to join room:', error);
         alert('Failed to join room: ' + (error as Error).message);

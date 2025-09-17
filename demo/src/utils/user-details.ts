@@ -4,7 +4,7 @@ let _roomId = '';
 
 export const password = 'x';
 
-const userNameEl = document.querySelector('#user-name') as Element;
+export const userNameEl = document.querySelector('#user-name') as Element;
 
 export const getUserName = () => _userName;
 export const updateToUserId = (userId: string) => (_toUserId = userId);
