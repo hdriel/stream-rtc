@@ -16,6 +16,7 @@ interface PeerConnectionInfo {
     peerConnection: RTCPeerConnection;
     remoteStream: MediaStream;
     isConnected: boolean;
+    pendingIceCandidates?: RTCIceCandidate[]; // Add this line
 }
 
 export class RTCRoomConnectionClient {
@@ -43,7 +44,7 @@ export class RTCRoomConnectionClient {
     private readonly errorCallBacks: Set<(error: Error, context?: string) => void>;
     private readonly roomListUpdatedCallBacks: Set<(rooms: RoomInfo[]) => void>;
 
-    private readonly userId: string;
+    private _userId: string;
     private readonly debugMode: boolean;
 
     constructor(
@@ -64,7 +65,7 @@ export class RTCRoomConnectionClient {
         } = {}
     ) {
         this.socket = socket;
-        this.userId = elements.userId;
+        this._userId = elements.userId;
         this.localVideoElement = elements.localVideoElement;
         this.localVideoQuerySelector = elements.localVideoQuerySelector;
 
@@ -84,6 +85,14 @@ export class RTCRoomConnectionClient {
         this.roomListUpdatedCallBacks = new Set();
 
         this.init();
+    }
+
+    get userId() {
+        return this._userId;
+    }
+
+    set userId(userId: string) {
+        this._userId = userId;
     }
 
     public debug(...args: any[]) {
@@ -286,6 +295,8 @@ export class RTCRoomConnectionClient {
             return this.peerConnections.get(userId)!.remoteStream;
         }
 
+        this.debug('🚀 Creating offer connection to:', userId);
+
         const peerConnection = new RTCPeerConnection(this.peerConfiguration);
         const remoteStream = new MediaStream();
 
@@ -294,6 +305,7 @@ export class RTCRoomConnectionClient {
             peerConnection,
             remoteStream,
             isConnected: false,
+            pendingIceCandidates: [],
         };
 
         this.peerConnections.set(userId, peerInfo);
@@ -306,14 +318,17 @@ export class RTCRoomConnectionClient {
         if (this.localStream) {
             this.localStream.getTracks().forEach((track) => {
                 peerConnection.addTrack(track, this.localStream as MediaStream);
+                this.debug('📤 Added local track to peer connection:', track.kind, 'for user:', userId);
             });
+        } else {
+            this.debug('⚠️ No local stream available when creating offer for:', userId);
         }
 
         // Create offer
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
-        this.debug(`Sending offer to user ${userId} in room ${this.currentRoom?.roomId}`);
+        this.debug(`📨 Sending offer to user ${userId} in room ${this.currentRoom?.roomId}`);
         this.socket.emit('roomOffer', {
             offer,
             targetUserId: userId,
@@ -333,16 +348,18 @@ export class RTCRoomConnectionClient {
         const { offer, offererUserId, roomId } = offerData;
 
         if (!this.currentRoom || this.currentRoom.roomId !== roomId) {
-            this.debug(`Received offer for room ${roomId} but current room is ${this.currentRoom?.roomId}`);
+            this.debug(`❌ Received offer for room ${roomId} but current room is ${this.currentRoom?.roomId}`);
             return;
         }
 
         if (this.peerConnections.has(offererUserId)) {
-            this.debug(`Connection with user ${offererUserId} already exists`);
+            this.debug(`⚠️ Connection with user ${offererUserId} already exists`);
             return;
         }
 
         try {
+            this.debug('🎯 Answering offer from:', offererUserId, 'in room:', roomId);
+
             const peerConnection = new RTCPeerConnection(this.peerConfiguration);
             const remoteStream = new MediaStream();
 
@@ -351,6 +368,7 @@ export class RTCRoomConnectionClient {
                 peerConnection,
                 remoteStream,
                 isConnected: false,
+                pendingIceCandidates: [],
             };
 
             this.peerConnections.set(offererUserId, peerInfo);
@@ -363,17 +381,29 @@ export class RTCRoomConnectionClient {
             if (this.localStream) {
                 this.localStream.getTracks().forEach((track) => {
                     peerConnection.addTrack(track, this.localStream as MediaStream);
+                    this.debug(
+                        '📤 Added local track to answerer peer connection:',
+                        track.kind,
+                        'for user:',
+                        offererUserId
+                    );
                 });
+            } else {
+                this.debug('⚠️ No local stream available when answering offer from:', offererUserId);
             }
 
-            // Set remote description
+            // Set remote description FIRST
             await peerConnection.setRemoteDescription(offer);
+            this.debug(`✅ Set remote description (offer) for ${offererUserId}`);
+
+            // Process any pending ICE candidates after setting remote description
+            await this.processPendingIceCandidates(offererUserId);
 
             // Create answer
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
 
-            this.debug(`Sending answer to user ${offererUserId} in room ${roomId}`);
+            this.debug(`📨 Sending answer to user ${offererUserId} in room ${roomId}`);
             this.socket.emit('roomAnswer', {
                 answer,
                 targetUserId: offererUserId,
@@ -381,7 +411,7 @@ export class RTCRoomConnectionClient {
                 answererUserId: this.userId,
             });
         } catch (error) {
-            this.debug(`Failed to answer offer from user ${offererUserId}:`, error);
+            this.debug(`❌ Failed to answer offer from user ${offererUserId}:`, error);
             this.handleError(error as Error, `answerOffer-${offererUserId}`);
         }
     }
@@ -401,15 +431,43 @@ export class RTCRoomConnectionClient {
         });
 
         peerConnection.addEventListener('track', (trackEvent) => {
-            this.debug(`Received track from user ${userId}`);
+            this.debug('📺 Received track event from user:', userId);
+            this.debug('Track details:', {
+                kind: trackEvent.track.kind,
+                id: trackEvent.track.id,
+                enabled: trackEvent.track.enabled,
+                muted: trackEvent.track.muted,
+                readyState: trackEvent.track.readyState,
+                streamsCount: trackEvent.streams.length,
+            });
+
             const peerInfo = this.peerConnections.get(userId);
             if (peerInfo) {
-                trackEvent.streams[0]?.getTracks().forEach((track) => {
-                    peerInfo.remoteStream.addTrack(track);
+                // Clear existing tracks from remote stream
+                peerInfo.remoteStream.getTracks().forEach((track) => {
+                    peerInfo.remoteStream.removeTrack(track);
                 });
+
+                // Add new tracks from the event streams
+                if (trackEvent.streams.length > 0) {
+                    trackEvent.streams[0].getTracks().forEach((track) => {
+                        this.debug('➕ Adding track to remote stream:', track.kind, 'for user:', userId);
+                        peerInfo.remoteStream.addTrack(track);
+                    });
+                }
 
                 // Update video element with new tracks
                 this.updateRemoteVideoElement(userId, peerInfo.remoteStream);
+
+                // Log final stream state
+                this.debug('📊 Remote stream state for', userId, ':', {
+                    id: peerInfo.remoteStream.id,
+                    videoTracks: peerInfo.remoteStream.getVideoTracks().length,
+                    audioTracks: peerInfo.remoteStream.getAudioTracks().length,
+                    allTracksActive: peerInfo.remoteStream.getTracks().every((t) => t.readyState === 'live'),
+                });
+            } else {
+                this.debug('⚠️ No peer info found for track event from:', userId);
             }
         });
 
@@ -631,6 +689,27 @@ export class RTCRoomConnectionClient {
         }
     }
 
+    private async processPendingIceCandidates(userId: string): Promise<void> {
+        const peerInfo = this.peerConnections.get(userId);
+        if (!peerInfo || !peerInfo.pendingIceCandidates || peerInfo.pendingIceCandidates.length === 0) {
+            return;
+        }
+
+        this.debug(`Processing ${peerInfo.pendingIceCandidates.length} pending ICE candidates for ${userId}`);
+
+        const candidates = peerInfo.pendingIceCandidates.slice(); // Create a copy
+        peerInfo.pendingIceCandidates = []; // Clear the pending list
+
+        for (const candidate of candidates) {
+            try {
+                await peerInfo.peerConnection.addIceCandidate(candidate);
+                this.debug(`Added queued ICE candidate for ${userId}`);
+            } catch (error) {
+                this.debug(`Failed to add queued ICE candidate for ${userId}:`, error);
+            }
+        }
+    }
+
     // Public utility methods
     public getCurrentRoom(): RoomInfo | null {
         return this.currentRoom;
@@ -715,11 +794,55 @@ export class RTCRoomConnectionClient {
         this.roomListUpdatedCallBacks.delete(cb);
     }
 
+    public debugConnectionState(userId?: string): void {
+        if (userId) {
+            const peerInfo = this.peerConnections.get(userId);
+            if (peerInfo) {
+                console.log(`=== Debug Connection State for ${userId} ===`);
+                console.log('Peer Connection State:', peerInfo.peerConnection.connectionState);
+                console.log('Signaling State:', peerInfo.peerConnection.signalingState);
+                console.log('ICE Connection State:', peerInfo.peerConnection.iceConnectionState);
+                console.log('ICE Gathering State:', peerInfo.peerConnection.iceGatheringState);
+                console.log('Local Description:', peerInfo.peerConnection.localDescription?.type);
+                console.log('Remote Description:', peerInfo.peerConnection.remoteDescription?.type);
+                console.log('Remote Stream Tracks:', peerInfo.remoteStream.getTracks().length);
+                console.log('Remote Video Tracks:', peerInfo.remoteStream.getVideoTracks().length);
+                console.log('Remote Audio Tracks:', peerInfo.remoteStream.getAudioTracks().length);
+                console.log('Pending ICE Candidates:', peerInfo.pendingIceCandidates?.length || 0);
+                console.log('Is Connected:', peerInfo.isConnected);
+
+                // Check video element
+                const videoEl = document.querySelector(`#remote-video-${userId} video`) as HTMLVideoElement;
+                if (videoEl) {
+                    console.log('Video Element srcObject:', !!videoEl.srcObject);
+                    console.log('Video Element readyState:', videoEl.readyState);
+                    console.log('Video Element videoWidth:', videoEl.videoWidth);
+                    console.log('Video Element videoHeight:', videoEl.videoHeight);
+                }
+            } else {
+                console.log(`No peer info found for ${userId}`);
+            }
+        } else {
+            console.log('=== Debug All Connections ===');
+            console.log('Current Room:', this.currentRoom?.roomId);
+            console.log('Room Participants:', this.currentRoom?.participants);
+            console.log('Peer Connections:', Array.from(this.peerConnections.keys()));
+            console.log('Local Stream:', !!this.localStream);
+            console.log('Local Stream Tracks:', this.localStream?.getTracks().length || 0);
+
+            for (const [userId, peerInfo] of this.peerConnections) {
+                console.log(`\n--- ${userId} ---`);
+                console.log('Connection State:', peerInfo.peerConnection.connectionState);
+                console.log('Remote Tracks:', peerInfo.remoteStream.getTracks().length);
+            }
+        }
+    }
+
     // Initialize socket event handlers
     private init() {
         // Handle room offer
         this.socket.on('roomOffer', async (offerData) => {
-            this.debug('Received room offer:', offerData);
+            this.debug('🔵 Received room offer from:', offerData.offererUserId, 'for room:', offerData.roomId);
             await this.answerRoomOffer(offerData);
         });
 
@@ -727,10 +850,25 @@ export class RTCRoomConnectionClient {
         this.socket.on(
             'roomAnswer',
             async (answerData: { answer: RTCSessionDescriptionInit; answererUserId: string; roomId: string }) => {
-                this.debug('Received room answer:', answerData);
+                this.debug('🟢 Received room answer from:', answerData.answererUserId, 'for room:', answerData.roomId);
                 const peerInfo = this.peerConnections.get(answerData.answererUserId);
                 if (peerInfo && this.currentRoom?.roomId === answerData.roomId) {
-                    await peerInfo.peerConnection.setRemoteDescription(answerData.answer);
+                    try {
+                        await peerInfo.peerConnection.setRemoteDescription(answerData.answer);
+                        this.debug('✅ Set remote description from answer for', answerData.answererUserId);
+
+                        // Process any pending ICE candidates after setting remote description
+                        await this.processPendingIceCandidates(answerData.answererUserId);
+                    } catch (error) {
+                        this.debug(
+                            '❌ Failed to set remote description from answer for',
+                            answerData.answererUserId,
+                            ':',
+                            error
+                        );
+                    }
+                } else {
+                    this.debug('⚠️ No peer info found or room mismatch for answer from', answerData.answererUserId);
                 }
             }
         );
@@ -741,32 +879,66 @@ export class RTCRoomConnectionClient {
             async (candidateData: { candidate: RTCIceCandidate; senderUserId: string; roomId: string }) => {
                 this.debug('Received room ICE candidate:', candidateData);
                 const peerInfo = this.peerConnections.get(candidateData.senderUserId);
+
                 if (peerInfo && this.currentRoom?.roomId === candidateData.roomId) {
-                    await peerInfo.peerConnection.addIceCandidate(candidateData.candidate);
+                    try {
+                        // Check if remote description is set before adding ICE candidate
+                        if (peerInfo.peerConnection.remoteDescription) {
+                            await peerInfo.peerConnection.addIceCandidate(candidateData.candidate);
+                            this.debug(`Added ICE candidate for ${candidateData.senderUserId}`);
+                        } else {
+                            // Queue the candidate for later processing
+                            if (!peerInfo.pendingIceCandidates) {
+                                peerInfo.pendingIceCandidates = [];
+                            }
+                            peerInfo.pendingIceCandidates.push(candidateData.candidate);
+                            this.debug(
+                                `Queued ICE candidate for ${candidateData.senderUserId} (remote description not set)`
+                            );
+                        }
+                    } catch (error) {
+                        this.debug(`Failed to add ICE candidate from ${candidateData.senderUserId}:`, error);
+                    }
                 }
             }
         );
 
         // Handle new participant joined
         this.socket.on('userJoinedRoom', async (data: { userId: string; roomId: string }) => {
-            this.debug('User joined room:', data);
+            this.debug('👋 User joined room event:', data);
 
             if (this.currentRoom?.roomId === data.roomId && data.userId !== this.userId) {
                 // Update participants list
                 if (!this.currentRoom.participants.includes(data.userId)) {
                     this.currentRoom.participants.push(data.userId);
+                    this.debug('📝 Updated room participants:', this.currentRoom.participants);
                 }
+
+                // Wait a bit for the other user to be ready
+                await new Promise((resolve) => setTimeout(resolve, 500));
 
                 // Create connection with new participant (only if we don't already have one)
                 if (!this.peerConnections.has(data.userId)) {
                     try {
+                        this.debug('🔗 Creating offer connection to new participant:', data.userId);
                         await this.createOfferConnection(data.userId);
                     } catch (error) {
-                        this.debug(`Failed to connect to new participant ${data.userId}:`, error);
+                        this.debug(`❌ Failed to connect to new participant ${data.userId}:`, error);
                     }
+                } else {
+                    this.debug('⚠️ Peer connection already exists for:', data.userId);
                 }
 
                 this.triggerUserJoinedRoom(data.userId, data.roomId);
+            } else if (this.currentRoom?.roomId !== data.roomId) {
+                this.debug(
+                    '⚠️ Received join event for different room:',
+                    data.roomId,
+                    'current:',
+                    this.currentRoom?.roomId
+                );
+            } else if (data.userId === this.userId) {
+                this.debug('🔄 Ignoring self-join event');
             }
         });
 
