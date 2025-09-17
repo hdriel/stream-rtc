@@ -1,4 +1,4 @@
-import type { Offer } from '../source-code';
+import type { Offer } from 'stream-rtc';
 
 export const localVideoQuerySelector = '#local-video';
 export const localVideoElement = document.querySelector(localVideoQuerySelector) as HTMLVideoElement;

@@ -1,4 +1,4 @@
-import { RTCRoomConnectionClient } from './source-code';
+import { RTCRoomConnectionClient } from 'stream-rtc';
 import { getUserName, userNameEl } from './utils/user-details';
 import { hangupButtonElement, localVideoElement, scenario } from './utils/elements';
 import { connectSocketIO } from './utils/socket-io';

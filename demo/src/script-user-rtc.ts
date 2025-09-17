@@ -1,4 +1,4 @@
-import { RTCUserConnectionClient, type Offer } from './source-code';
+import { RTCUserConnectionClient, type Offer } from 'stream-rtc';
 import { getUserName } from './utils/user-details';
 import {
     localVideoElement,
