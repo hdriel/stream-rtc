@@ -7,13 +7,17 @@ settings:
 importers:
 
   .:
+    dependencies:
+      stream-rtc:
+        specifier: file:.yalc/stream-rtc
+        version: file:.yalc/stream-rtc
     devDependencies:
       '@types/express':
         specifier: ^5.0.3
         version: 5.0.3
       '@vitejs/plugin-react':
         specifier: ^5.0.2
-        version: 5.0.2(vite@7.1.4(@types/node@24.3.0)(tsx@4.20.5))
+        version: 5.0.2(vite@7.1.5(@types/node@24.3.0)(tsx@4.20.5))
       express:
         specifier: 5.0.0
         version: 5.0.0
@@ -45,8 +49,8 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
       vite:
-        specifier: ^7.1.2
-        version: 7.1.4(@types/node@24.3.0)(tsx@4.20.5)
+        specifier: ^7.1.5
+        version: 7.1.5(@types/node@24.3.0)(tsx@4.20.5)
 
 packages:
 
@@ -1081,12 +1085,15 @@ packages:
     resolution: {integrity: sha512-RwNA9Z/7PrK06rYLIzFMlaF+l73iwpzsqRIFgbMLbTcLD6cOao82TaWefPXQvB2fOC4AjuYSEndS7N/mTCbkdQ==}
     engines: {node: '>= 0.8'}
 
+  stream-rtc@file:.yalc/stream-rtc:
+    resolution: {directory: .yalc/stream-rtc, type: directory}
+
   supports-color@5.5.0:
     resolution: {integrity: sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==}
     engines: {node: '>=4'}
 
-  tinyglobby@0.2.14:
-    resolution: {integrity: sha512-tX5e7OM1HnYr2+a2C/4V0htOcSQcoSTH9KgJnVvNm5zm/cyEWKJ7j7YutsH9CxMdtOkkLFy2AHrMci9IM8IPZQ==}
+  tinyglobby@0.2.15:
+    resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
     engines: {node: '>=12.0.0'}
 
   to-regex-range@5.0.1:
@@ -1159,8 +1166,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
-  vite@7.1.4:
-    resolution: {integrity: sha512-X5QFK4SGynAeeIt+A7ZWnApdUyHYm+pzv/8/A57LqSGcI88U6R6ipOs3uCesdc6yl7nl+zNO0t8LmqAdXcQihw==}
+  vite@7.1.5:
+    resolution: {integrity: sha512-4cKBO9wR75r0BeIWWWId9XK9Lj6La5X846Zw9dFfzMRw38IlTk2iCcUt6hsyiDRcPidc55ZParFYDXi0nXOeLQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -1596,7 +1603,7 @@ snapshots:
       '@types/node': 24.3.0
       '@types/send': 0.17.5
 
-  '@vitejs/plugin-react@5.0.2(vite@7.1.4(@types/node@24.3.0)(tsx@4.20.5))':
+  '@vitejs/plugin-react@5.0.2(vite@7.1.5(@types/node@24.3.0)(tsx@4.20.5))':
     dependencies:
       '@babel/core': 7.28.4
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.4)
@@ -1604,7 +1611,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.34
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-      vite: 7.1.4(@types/node@24.3.0)(tsx@4.20.5)
+      vite: 7.1.5(@types/node@24.3.0)(tsx@4.20.5)
     transitivePeerDependencies:
       - supports-color
 
@@ -2270,11 +2277,13 @@ snapshots:
 
   statuses@2.0.1: {}
 
+  stream-rtc@file:.yalc/stream-rtc: {}
+
   supports-color@5.5.0:
     dependencies:
       has-flag: 3.0.0
 
-  tinyglobby@0.2.14:
+  tinyglobby@0.2.15:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
@@ -2340,14 +2349,14 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite@7.1.4(@types/node@24.3.0)(tsx@4.20.5):
+  vite@7.1.5(@types/node@24.3.0)(tsx@4.20.5):
     dependencies:
       esbuild: 0.25.9
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
       postcss: 8.5.6
       rollup: 4.50.0
-      tinyglobby: 0.2.14
+      tinyglobby: 0.2.15
     optionalDependencies:
       '@types/node': 24.3.0
       fsevents: 2.3.3
