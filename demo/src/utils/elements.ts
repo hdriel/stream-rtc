@@ -68,7 +68,8 @@ export function addAnswerElement(offer: Offer, answerCB: () => void, cancelCB: (
     const cancelOfferEl = document.createElement('button');
     cancelOfferEl.className = 'cancel-offer btn btn-danger';
     cancelOfferEl.textContent = 'Cancel';
-    cancelOfferEl.addEventListener('click', () => {
+    cancelOfferEl.addEventListener('click', (e) => {
+        e.stopPropagation();
         cancelCB?.();
         newOfferEl.remove();
     });
