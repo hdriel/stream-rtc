@@ -1,4 +1,4 @@
-import { RTCRoomConnectionClient } from 'stream-rtc';
+import { RTCRoomConnectionClient, type RoomInfo } from 'stream-rtc';
 import { getUserName, userNameEl } from './utils/user-details';
 import { hangupButtonElement, localVideoElement, scenario } from './utils/elements';
 import { connectSocketIO } from './utils/socket-io';
@@ -10,14 +10,6 @@ window.RTCRoomConnectionClient = RTCRoomConnectionClient;
 scenario('Room Connections with video elements');
 hangupButtonElement?.remove();
 userNameEl?.remove();
-
-interface RoomInfo {
-    roomId: string;
-    roomName?: string;
-    isHost: boolean;
-    participants: string[];
-    maxParticipants?: number;
-}
 
 let currentRoom: RoomInfo | null = null;
 let availableRooms: RoomInfo[] = [];

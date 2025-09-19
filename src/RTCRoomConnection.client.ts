@@ -1,23 +1,8 @@
 // RTCRoomClient.ts - Room-based WebRTC system
 import type { Socket } from 'socket.io-client';
-import { RTCPeerConnectionError, type SocketEventType } from './decs.ts';
+import type { SocketEventType, PeerConnectionInfo, RoomInfo } from './decs.ts';
 import { PEER_CONFIGURATION } from './consts.ts';
-
-interface RoomInfo {
-    roomId: string;
-    roomName?: string;
-    isHost: boolean;
-    participants: string[];
-    maxParticipants?: number;
-}
-
-interface PeerConnectionInfo {
-    userId: string;
-    peerConnection: RTCPeerConnection;
-    remoteStream: MediaStream;
-    isConnected: boolean;
-    pendingIceCandidates?: RTCIceCandidate[]; // Add this line
-}
+import { RTCPeerConnectionError } from './RTCPeerConnectionError.ts';
 
 export class RTCRoomConnectionClient {
     private readonly socket: Socket;
@@ -135,6 +120,9 @@ export class RTCRoomConnectionClient {
                 isHost: true,
                 participants: [this.userId],
                 maxParticipants: roomData.maxParticipants,
+                creatorUserId: this.userId,
+                createdAt: new Date(),
+                isPrivate: options.isPrivate || false,
             };
 
             this.currentRoom = roomInfo;
@@ -175,6 +163,9 @@ export class RTCRoomConnectionClient {
                 isHost: false,
                 participants: roomData.participants || [],
                 maxParticipants: roomData.maxParticipants,
+                isPrivate: roomData.isPrivate,
+                createdAt: roomData.createdAt,
+                creatorUserId: roomData.createdAt,
             };
 
             this.currentRoom = roomInfo;
@@ -306,6 +297,7 @@ export class RTCRoomConnectionClient {
             remoteStream,
             isConnected: false,
             pendingIceCandidates: [],
+            didIOffer: false,
         };
 
         this.peerConnections.set(userId, peerInfo);
@@ -369,6 +361,7 @@ export class RTCRoomConnectionClient {
                 remoteStream,
                 isConnected: false,
                 pendingIceCandidates: [],
+                didIOffer: false,
             };
 
             this.peerConnections.set(offererUserId, peerInfo);

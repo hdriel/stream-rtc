@@ -1,14 +1,7 @@
 import type { Socket } from 'socket.io-client';
-import { type Offer, RTCPeerConnectionError, type SocketEventType } from './decs.ts';
+import type { Offer, SocketEventType, PeerConnectionInfo } from './decs.ts';
 import { PEER_CONFIGURATION, SOCKET_EVENTS } from './consts.ts';
-
-interface PeerConnectionInfo {
-    userId: string;
-    peerConnection: RTCPeerConnection;
-    remoteStream: MediaStream;
-    isConnected: boolean;
-    didIOffer: boolean; // Track who initiated the connection
-}
+import { RTCPeerConnectionError } from './RTCPeerConnectionError.ts';
 
 export class RTCUserConnectionClient {
     private readonly socket: Socket;

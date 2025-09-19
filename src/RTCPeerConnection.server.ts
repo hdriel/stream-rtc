@@ -1,16 +1,6 @@
 import type { Socket as SocketIO } from 'socket.io';
-import type { SocketEventType, Offer, IceCandidateOffer } from './decs.ts';
+import type { SocketEventType, Offer, IceCandidateOffer, RoomInfo } from './decs.ts';
 import { SOCKET_EVENTS } from './consts.ts';
-
-interface RoomInfo {
-    roomId: string;
-    roomName: string;
-    isPrivate: boolean;
-    maxParticipants: number;
-    participants: string[];
-    creatorUserId: string;
-    createdAt: Date;
-}
 
 export class RTCPeerConnectionServer {
     private socket: SocketIO;
@@ -136,21 +126,9 @@ export class RTCPeerConnectionServer {
         );
 
         // Room management events
-        this.socket.on(
-            'createRoom',
-            async (
-                roomData: {
-                    roomName: string;
-                    roomId?: string;
-                    maxParticipants?: number;
-                    isPrivate?: boolean;
-                    creatorUserId: string;
-                },
-                ackFunction: (response: any) => void
-            ) => {
-                this.handleCreateRoom(roomData, ackFunction);
-            }
-        );
+        this.socket.on('createRoom', async (roomData: RoomInfo, ackFunction: (response: any) => void) => {
+            this.handleCreateRoom(roomData, ackFunction);
+        });
 
         this.socket.on(
             'joinRoom',
@@ -450,16 +428,7 @@ export class RTCPeerConnectionServer {
         }
     }
 
-    private handleCreateRoom(
-        roomData: {
-            roomName: string;
-            roomId?: string;
-            maxParticipants?: number;
-            isPrivate?: boolean;
-            creatorUserId: string;
-        },
-        ackFunction: (response: any) => void
-    ) {
+    private handleCreateRoom(roomData: RoomInfo, ackFunction: (response: any) => void) {
         const roomId = roomData.roomId || this.generateRoomId();
 
         // Check if room already exists
@@ -476,6 +445,7 @@ export class RTCPeerConnectionServer {
             participants: [roomData.creatorUserId],
             creatorUserId: roomData.creatorUserId,
             createdAt: new Date(),
+            isHost: roomData.isHost,
         };
 
         RTCPeerConnectionServer.rooms.set(roomId, room);
@@ -578,7 +548,7 @@ export class RTCPeerConnectionServer {
     }
 
     private handleGetAvailableRooms(ackFunction: (rooms: RoomInfo[]) => void) {
-        const publicRooms = Array.from(RTCPeerConnectionServer.rooms.values())
+        const publicRooms: RoomInfo[] = Array.from(RTCPeerConnectionServer.rooms.values())
             .filter((room) => !room.isPrivate)
             .map((room) => ({
                 roomId: room.roomId,
@@ -588,6 +558,7 @@ export class RTCPeerConnectionServer {
                 participants: room.participants,
                 creatorUserId: room.creatorUserId,
                 createdAt: room.createdAt,
+                isHost: room.isHost,
             }));
 
         ackFunction(publicRooms);
