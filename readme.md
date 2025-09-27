@@ -14,36 +14,23 @@ A robust TypeScript signaling solution for WebRTC applications using Socket.io a
 
 ***
 
-## Project Structure
-
-```
-src/
-├── RTCPeerConnection.server.ts    # Signaling server logic (Socket.io)
-├── RTCPeerConnection.client.ts    # WebRTC client logic (browser/app)
-├── decs.ts                        # Shared types, enums, interfaces
-└── consts.ts                      # Constants (event names, ICE config)
-```
-
-
-***
-
 ## Requirements
 
 - **Node.js** (>= 14)
-- **socket.io** - for the signaling server
-- **socket.io-client** - for the client app
+- **socket.io** - for the signaling server side
+- **socket.io-client** - for the client app side
 - **TypeScript** (if using or building from source)
 
 Install dependencies:
 
 for server side
 ```shell
-npm install socket.io
+  npm install stream-rtc socket.io
 ```
 
 for client side
 ```shell
-npm install socket.io-client
+  npm install stream-rtc socket.io-client
 ```
 
 
@@ -55,7 +42,7 @@ npm install socket.io-client
 
 ```typescript
 import { Server } from 'socket.io';
-import { RTCPeerConnectionServer } from './RTCPeerConnection.server';
+import { RTCPeerConnectionServer } from 'stream-rtc';
 
 const io = new Server(3000);
 
@@ -70,14 +57,14 @@ io.on('connection', (socket) => {
 
 ***
 
-### 2. Client Example
+### 2. Client Example of user to user
 
 ```typescript
 import { io } from 'socket.io-client';
-import { RTCPeerConnectionClient } from './RTCPeerConnection.client';
+import { RTCPeerConnectionClient } from 'stream-rtc';
 
 const socket = io('http://localhost:3000');
-const rtcClient = new RTCPeerConnectionClient(socket, { userId: 'userA' });
+const rtcClient = new RTCPeerConnectionClient(socket, { userId: 'user-A' });
 
 rtcClient.onOffersReceived((offers)=>{
     const offerOptions = offers;
@@ -97,6 +84,33 @@ rtcClient.call().then(([localStream, remoteStream]) => {
 });
 ```
 
+### 2. Client Example room chat
+
+```typescript
+import { io } from 'socket.io-client';
+import { RTCRoomConnectionClient, type RoomInfo } from 'stream-rtc';
+
+const socket = io('http://localhost:3000');
+const rtcClient = new RTCRoomConnectionClient(socket, { userId: getUserName(), localVideoElement }, { debugMode: true });
+
+// first user should create room like that 
+...
+await pc.createRoom(roomName, {
+    maxParticipants: 10,
+    isPrivate: false,
+    constraints: { video: true, audio: true },
+});
+...
+
+// #################################################
+
+// the rest users should join the room like that:
+...
+await pc.joinRoom(roomId, { video: true, audio: true });
+...
+
+```
+
 - Use `call()` to request media permissions and initiate a connection.
 - Listen and respond to offers with `answerOffer()`.
 - ICE candidate and SDP negotiation is handled for you.
@@ -111,44 +125,6 @@ rtcClient.call().then(([localStream, remoteStream]) => {
   Modify `PEER_CONFIGURATION` in `consts.ts` for different STUN/TURN servers.
 - **Debugging:**
   Pass `{ debugMode: true }` to the client constructor to enable logging.
-
-***
-
-## Testing
-
-To test locally:
-
-1. Start the signaling server:
-
-```shell
-node ./src/server.js  # or use ts-node for TypeScript
-```
-
-2. Launch two separate clients (different browsers/tabs or machines) and connect to the server as different users.
-3. Use the provided API to initiate and answer calls.
-
-***
-
-## API Overview
-
-| Component | Description |
-| :-- | :-- |
-| RTCPeerConnectionServer | Handles offers, answers, and ICE candidates (signaling logic for Socket.io server) |
-| RTCPeerConnectionClient | Manages media streams, SDP exchange, and ICE negotiation on the client |
-| SOCKET_EVENTS / PEER_CONFIGURATION | Constants for event names and WebRTC ICE servers |
-| Offer (interface, decs.ts) | Typed structure for WebRTC offer/answer exchange |
-
-
-***
-
-## Folder/File Reference
-
-| File | Role |
-| :-- | :-- |
-| `RTCPeerConnection.server.ts` | Socket.io-based signaling server |
-| `RTCPeerConnection.client.ts` | WebRTC peer/client logic |
-| `decs.ts` | Type definitions \& enums |
-| `consts.ts` | Configurable constants |
 
 
 ***
@@ -180,4 +156,4 @@ MIT
 ***
 
 Ready to build fast and robust WebRTC apps? Get started now!
-For more information, see the comments and documentation within each file.
+For more information, see the code example of demo directory in the repository

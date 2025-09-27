@@ -246,7 +246,7 @@ function setupRoomEventListeners() {
         if (roomsList?.style.display === 'none') {
             roomsList.style.display = 'block';
             toggleRoomsBtn.textContent = 'Hide Available Rooms';
-            loadAvailableRooms();
+            return loadAvailableRooms();
         } else {
             roomsList!.style.display = 'none';
             toggleRoomsBtn.textContent = 'Show Available Rooms';
@@ -256,7 +256,7 @@ function setupRoomEventListeners() {
     // Refresh rooms
     const refreshRoomsBtn = document.getElementById('refresh-rooms-btn');
     refreshRoomsBtn?.addEventListener('click', () => {
-        loadAvailableRooms();
+        return loadAvailableRooms();
     });
 
     // Leave room button

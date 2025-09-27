@@ -1,8 +1,8 @@
 {
     "name": "stream-rtc",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "type": "module",
-    "description": " RTCPeerConnectionClient/RTCPeerConnectionServer: simple usage RTC peer connection to handle only what we need without to enter the details like STUN SDP ICE and so on, also great handler for stream functionality in classes like: ScreenRecorder ShareScreen StreamControls",
+    "description": "RTCRoomConnectionClient;RTCPeerConnectionClient;RTCPeerConnectionServer: simple usage RTC peer connection to handle only what we need without to enter the details like STUN SDP ICE and so on, also great handler for stream functionality in classes like: ScreenRecorder ShareScreen StreamControls",
     "scripts": {
         "build": "tsc && vite build --mode=development",
         "preview": "vite preview",
@@ -30,7 +30,7 @@
         "socket.io-client": "^4.8.1",
         "ts-node": "^10.9.2",
         "typescript": "^5.9.2",
-        "vite": "^7.1.2",
+        "vite": "7.1.5",
         "vite-plugin-dts": "^4.5.4",
         "yalc": "^1.0.0-pre.53"
     },
