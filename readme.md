@@ -2,6 +2,8 @@
 
 A robust TypeScript signaling solution for WebRTC applications using Socket.io as the signaling mechanism. The package provides an extensible and simple API for both server-side (signaling server) and client-side (browser/app) logic, enabling fast development of peer-to-peer video, audio, or data channels.
 
+[![NPM](https://nodei.co/npm/stream-rtc.svg)](https://nodei.co/npm/stream-rtc/)
+
 ***
 
 ## Features
@@ -132,28 +134,23 @@ await pc.joinRoom(roomId, { video: true, audio: true });
 how to allow Chrome use camera/min on untrast https localhost certificate
 
 1. go chrome flags [click here](chrome://flags/#unsafely-treat-insecure-origin-as-secure)
-![Logger Output](readme-assets/chrome.webp)
+![screenshot Output chrome flags](readme-assets/chrome.webp)
  
 2. add your specific url like: https://localhost:8181
 3. then refresh button will appear click it 
 4. done! go to your chrome host and use camera! 
-![Logger Output](readme-assets/chrome-permission.webp)
+![screenshot Output chrome permission](readme-assets/chrome-permission.webp)
 
-
-***
-
-## Contributing
-
-- Pull requests and issues are welcome!
-- Please open issues for bugs, suggestions, or feature requests.
 
 ***
 
 ## License
 
-MIT
+MIT License
 
 ***
 
-Ready to build fast and robust WebRTC apps? Get started now!
-For more information, see the code example of demo directory in the repository
+For full source and documentation, visit the [repository](https://github.com/hdriel/stream-rtc).
+
+[![npm](npm.png)](https://www.npmjs.com/package/stream-rtc)
+[![github](github.png)](https://github.com/hdriel/stream-rtc)
