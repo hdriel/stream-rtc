@@ -150,7 +150,7 @@ MIT License
 
 ***
 
-For full source and documentation, visit the [repository](https://github.com/hdriel/stream-rtc).
+For full source and documentation, visit the example of working _demo_ directory in the [repository](https://github.com/hdriel/stream-rtc).
 
 [![npm](npm.png)](https://www.npmjs.com/package/stream-rtc)
 [![github](github.png)](https://github.com/hdriel/stream-rtc)
